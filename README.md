@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15051505.svg)](https://doi.org/10.5281/zenodo.20114236)
+
 # FLInterrupt
 
 FLInterrupt is an interactive federated learning framework/simulator for studying how client connectivity affects global training behavior.
