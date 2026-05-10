@@ -1,0 +1,16 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+torch==2.4.1
+torchvision==0.19.1
+numpy==2.0.2
+
+#cd /Users/tudordavid/Developer/FLInterrupt/backend
+#source .venv/bin/activate
+#uvicorn app.main:app --reload --port 8000
+
+
+# cd /Users/tudordavid/Developer/FLInterrupt/backend
+# python3 -m venv .venv
+# source .venv/bin/activate
+# pip install -r requirements.txt
+# uvicorn app.main:app --reload --port 8000
