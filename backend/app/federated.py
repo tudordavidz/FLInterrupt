@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import math
 import random
 import threading
 import time
@@ -8,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
 import torch
 from torch import nn
 from torch.optim import SGD
@@ -19,6 +21,208 @@ from .model import create_model, get_supported_models
 
 SUPPORTED_DATASETS = ["cifar10", "cifar100", "mnist", "fashionmnist"]
 SUPPORTED_DISTRIBUTIONS = ["iid", "noniid"]
+
+CIFAR10_CLASS_LABELS = [
+    "airplane",
+    "automobile",
+    "bird",
+    "cat",
+    "deer",
+    "dog",
+    "frog",
+    "horse",
+    "ship",
+    "truck",
+]
+FASHIONMNIST_CLASS_LABELS = [
+    "t-shirt",
+    "trouser",
+    "pullover",
+    "dress",
+    "coat",
+    "sandal",
+    "shirt",
+    "sneaker",
+    "bag",
+    "ankle-boot",
+]
+
+
+def class_labels_for_dataset(dataset_name: str, num_classes: Optional[int] = None) -> List[str]:
+    d = str(dataset_name or "cifar10").lower()
+    if d == "cifar10":
+        return CIFAR10_CLASS_LABELS.copy()
+    if d == "fashionmnist":
+        return FASHIONMNIST_CLASS_LABELS.copy()
+    if d == "mnist":
+        return [str(i) for i in range(10)]
+    if d == "cifar100":
+        n = int(num_classes) if num_classes is not None else 100
+        return [str(i) for i in range(n)]
+    n = int(num_classes) if num_classes is not None else 10
+    return [str(i) for i in range(n)]
+
+# Two-tailed 95% Student-t critical values (df -> t*). Large df uses 1.96.
+_TCRIT_95 = {
+    1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
+    6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
+    11: 2.201, 12: 2.179, 13: 2.160, 14: 2.145, 15: 2.131,
+    16: 2.120, 17: 2.110, 18: 2.101, 19: 2.093, 20: 2.086,
+    21: 2.080, 22: 2.074, 23: 2.069, 24: 2.064, 25: 2.060,
+    26: 2.056, 27: 2.052, 28: 2.048, 29: 2.045, 30: 2.042,
+}
+
+
+def _t_critical_95(df: int) -> float:
+    if df <= 0:
+        return float("inf")
+    if df in _TCRIT_95:
+        return _TCRIT_95[df]
+    if df > 30:
+        return 1.96
+    # Linear interpolate between nearest tabulated dfs.
+    lo = max(k for k in _TCRIT_95 if k <= df)
+    hi = min(k for k in _TCRIT_95 if k >= df)
+    if lo == hi:
+        return _TCRIT_95[lo]
+    w = (df - lo) / float(hi - lo)
+    return _TCRIT_95[lo] * (1.0 - w) + _TCRIT_95[hi] * w
+
+
+def _regularized_incomplete_beta(x: float, a: float, b: float) -> float:
+    """Continued-fraction approx of the regularized incomplete beta I_x(a, b)."""
+    if x <= 0.0:
+        return 0.0
+    if x >= 1.0:
+        return 1.0
+
+    def _betacf(aa: float, bb: float, xx: float) -> float:
+        max_iter = 200
+        eps = 3.0e-7
+        fpmin = 1.0e-30
+        qab = aa + bb
+        qap = aa + 1.0
+        qam = aa - 1.0
+        c = 1.0
+        d = 1.0 - qab * xx / qap
+        if abs(d) < fpmin:
+            d = fpmin
+        d = 1.0 / d
+        h = d
+        for m in range(1, max_iter + 1):
+            m2 = 2 * m
+            aa_term = m * (bb - m) * xx / ((qam + m2) * (aa + m2))
+            d = 1.0 + aa_term * d
+            if abs(d) < fpmin:
+                d = fpmin
+            c = 1.0 + aa_term / c
+            if abs(c) < fpmin:
+                c = fpmin
+            d = 1.0 / d
+            h *= d * c
+            aa_term = -(aa + m) * (qab + m) * xx / ((aa + m2) * (qap + m2))
+            d = 1.0 + aa_term * d
+            if abs(d) < fpmin:
+                d = fpmin
+            c = 1.0 + aa_term / c
+            if abs(c) < fpmin:
+                c = fpmin
+            d = 1.0 / d
+            delta = d * c
+            h *= delta
+            if abs(delta - 1.0) < eps:
+                break
+        return h
+
+    lbeta = math.lgamma(a) + math.lgamma(b) - math.lgamma(a + b)
+    front = math.exp(math.log(max(x, 1e-300)) * a + math.log(max(1.0 - x, 1e-300)) * b - lbeta)
+    if x < (a + 1.0) / (a + b + 2.0):
+        return front * _betacf(a, b, x) / a
+    return 1.0 - front * _betacf(b, a, 1.0 - x) / b
+
+
+def _student_t_sf(abs_t: float, df: float) -> float:
+    """One-tailed survival P(T >= |t|) for Student-t with given df."""
+    if df <= 0 or not math.isfinite(abs_t):
+        return 1.0
+    x = df / (df + abs_t * abs_t)
+    return 0.5 * _regularized_incomplete_beta(x, df / 2.0, 0.5)
+
+
+def _format_pvalue(p: float) -> str:
+    if p < 0.001:
+        return "<0.001"
+    return f"{p:.3f}"
+
+
+def _compute_metric_row(
+    metric: str,
+    values: List[float],
+    null_mean: float,
+    as_percent: bool = False,
+) -> Dict[str, Any]:
+    arr = np.asarray(values, dtype=np.float64)
+    n = int(arr.size)
+    mean = float(arr.mean()) if n else 0.0
+    std = float(arr.std(ddof=1)) if n > 1 else 0.0
+    se = std / math.sqrt(n) if n > 0 else 0.0
+    df = max(n - 1, 1)
+    t_crit = _t_critical_95(df)
+    ci_low = mean - t_crit * se
+    ci_high = mean + t_crit * se
+
+    if n > 1 and se > 0:
+        t_stat = (mean - null_mean) / se
+        p_raw = 2.0 * _student_t_sf(abs(t_stat), float(df))
+        p_raw = min(max(p_raw, 0.0), 1.0)
+    else:
+        t_stat = 0.0
+        p_raw = 1.0
+
+    if as_percent:
+        mean_s = mean * 100.0
+        std_s = std * 100.0
+        ci_low_s = ci_low * 100.0
+        ci_high_s = ci_high * 100.0
+        mean_std = f"{mean_s:.2f}% ± {std_s:.2f}%"
+        ci = f"[{ci_low_s:.2f}, {ci_high_s:.2f}]"
+    else:
+        mean_std = f"{mean:.3f} ± {std:.3f}"
+        ci = f"[{ci_low:.3f}, {ci_high:.3f}]"
+
+    return {
+        "metric": metric,
+        "mean": mean,
+        "std": std,
+        "ci_low": ci_low,
+        "ci_high": ci_high,
+        "mean_std": mean_std,
+        "ci_95": ci,
+        "p_value": p_raw,
+        "p_value_display": _format_pvalue(p_raw),
+        "t_statistic": float(t_stat),
+        "null_mean": null_mean,
+        "n": n,
+    }
+
+
+def build_repeated_kfold_stats_table(
+    fold_results: List[Dict[str, Any]],
+    num_classes: int,
+) -> List[Dict[str, Any]]:
+    """Build Mean ± Std / 95% CI / p-value rows for validation metrics only.
+
+    Repeated K-fold here evaluates a frozen global model (no retraining), so only
+    held-out fold validation metrics are reported in the summary table.
+    """
+    chance_acc = 1.0 / float(max(num_classes, 1))
+    chance_loss = math.log(float(max(num_classes, 2)))
+    val_acc = [float(r["val_accuracy"]) for r in fold_results]
+    val_loss = [float(r["val_loss"]) for r in fold_results]
+    return [
+        _compute_metric_row("Validation accuracy", val_acc, chance_acc, as_percent=True),
+        _compute_metric_row("Validation loss", val_loss, chance_loss, as_percent=False),
+    ]
 
 
 @dataclass
@@ -70,7 +274,7 @@ class FederatedSimulation:
         self.logs: List[str] = []
         self.history: List[Dict[str, Any]] = []
         self.clients: List[ClientState] = []
-        self.class_labels: List[str] = [str(i) for i in range(10)]
+        self.class_labels: List[str] = class_labels_for_dataset("cifar10")
         self.num_classes = 10
 
         self.device = self._select_device()
@@ -291,20 +495,10 @@ class FederatedSimulation:
             else:
                 self.num_classes = 10
 
-            if self.config["dataset_name"] == "cifar10":
-                self.class_labels = [
-                    "airplane", "automobile", "bird", "cat", "deer",
-                    "dog", "frog", "horse", "ship", "truck",
-                ]
-            elif self.config["dataset_name"] == "cifar100":
-                self.class_labels = [str(i) for i in range(100)]
-            elif self.config["dataset_name"] == "mnist":
-                self.class_labels = [str(i) for i in range(10)]
-            else:
-                self.class_labels = [
-                    "t-shirt", "trouser", "pullover", "dress", "coat",
-                    "sandal", "shirt", "sneaker", "bag", "ankle-boot",
-                ]
+            self.class_labels = class_labels_for_dataset(
+                self.config["dataset_name"],
+                self.num_classes,
+            )
 
             self.global_model = self._build_model().to(self.device)
             self.running = True
@@ -979,11 +1173,13 @@ class FederatedSimulation:
         mean_train_loss = sum(float(r["train_loss"]) for r in fold_results) / float(total_folds)
         mean_val_acc = sum(float(r["val_accuracy"]) for r in fold_results) / float(total_folds)
         mean_val_loss = sum(float(r["val_loss"]) for r in fold_results) / float(total_folds)
+        stats_table = build_repeated_kfold_stats_table(fold_results, self.num_classes)
 
         return {
             "repeats": repeats,
             "k_folds": k_folds,
             "sample_count": sample_count,
+            "total_folds": total_folds,
             "fold_results": fold_results,
             "mean_train_accuracy": mean_train_acc,
             "mean_train_loss": mean_train_loss,
@@ -993,5 +1189,17 @@ class FederatedSimulation:
             "mean_accuracy": mean_val_acc,
             "mean_loss": mean_val_loss,
             "mean_confusion_matrix": mean_confusion,
-            "labels": self.class_labels,
+            "labels": class_labels_for_dataset(
+                str(self.config.get("dataset_name", "cifar10")),
+                self.num_classes,
+            ),
+            "dataset_name": str(self.config.get("dataset_name", "cifar10")),
+            "stats_table": stats_table,
+            "stats_table_note": (
+                f"Repeated K-fold cross-validation statistics "
+                f"({k_folds}-fold × {repeats} repeats, {total_folds} folds). "
+                "The frozen global model is reused (no retraining); metrics are "
+                "held-out fold validation only. One-sample t-test vs chance "
+                "accuracy (1/C) and chance CE loss (ln C)."
+            ),
         }

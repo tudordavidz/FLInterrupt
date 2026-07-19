@@ -197,6 +197,56 @@ const LABEL_MAP = {
   max_samples: "Max Samples",
 };
 
+const DATASET_CLASS_LABELS = {
+  cifar10: [
+    "airplane",
+    "automobile",
+    "bird",
+    "cat",
+    "deer",
+    "dog",
+    "frog",
+    "horse",
+    "ship",
+    "truck",
+  ],
+  fashionmnist: [
+    "t-shirt",
+    "trouser",
+    "pullover",
+    "dress",
+    "coat",
+    "sandal",
+    "shirt",
+    "sneaker",
+    "bag",
+    "ankle-boot",
+  ],
+};
+
+function resolveConfusionLabels(cvData, state) {
+  const fromCv = cvData?.labels;
+  if (Array.isArray(fromCv) && fromCv.length) {
+    const looksNumeric = fromCv.every((x) => /^\d+$/.test(String(x)));
+    if (!looksNumeric) {
+      return fromCv;
+    }
+  }
+  const fromState = state?.class_labels;
+  if (Array.isArray(fromState) && fromState.length) {
+    const looksNumeric = fromState.every((x) => /^\d+$/.test(String(x)));
+    if (!looksNumeric) {
+      return fromState;
+    }
+  }
+  const ds = String(cvData?.dataset_name || state?.config?.dataset_name || "cifar10").toLowerCase();
+  if (DATASET_CLASS_LABELS[ds]) {
+    return DATASET_CLASS_LABELS[ds];
+  }
+  const n = cvData?.mean_confusion_matrix?.length || fromCv?.length || fromState?.length || 10;
+  return Array.from({ length: n }, (_, i) => String(i));
+}
+
 function prettyLabel(key) {
   return LABEL_MAP[key] || key.replaceAll("_", " ");
 }
@@ -228,17 +278,50 @@ function confusionMatrixCanvasDimensions(n, scale = CHART_FONT_SCALE.default) {
   }
 
   const size = Math.ceil(n * minCell);
-  // Left pad must fit y-axis tick labels + gap + vertical "True class" (see drawConfusionMatrix).
-  const padL = n <= 12 ? p(210) : n <= 20 ? p(162) : n <= 50 ? p(112) : p(88);
-  const padR = p(52);
-  // Top margin for horizontal class names (no diagonal labels).
-  const padT = n <= 20 ? p(108) : p(100);
-  const padB = p(168);
+  // Left pad: side class names + "True Label" title.
+  const padL = n <= 12 ? p(270) : n <= 20 ? p(210) : n <= 50 ? p(150) : p(120);
+  // Right pad: vertical color bar + ticks + "Mean Count".
+  const padR = p(168);
+  // Top: small margin only (predicted labels sit at the bottom).
+  const padT = p(36);
+  // Bottom: 45° predicted class names + "Predicted Label".
+  const padB = n <= 12 ? p(240) : n <= 20 ? p(210) : p(170);
 
   return {
     w: Math.min(cap, size + padL + padR),
     h: Math.min(cap, size + padT + padB),
   };
+}
+
+function downloadStatsTableCsv(statsTable, filename = "kfold-stats-table.csv") {
+  if (!statsTable?.length) {
+    return;
+  }
+  const header = ["Metric", "Mean ± Std", "95% CI", "p-value"];
+  const rows = statsTable.map((row) => [
+    row.metric,
+    row.mean_std,
+    row.ci_95,
+    row.p_value_display ?? String(row.p_value),
+  ]);
+  const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = [header, ...rows].map((r) => r.map(escape).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function downloadCanvas(canvas, filename) {
@@ -251,34 +334,207 @@ function downloadCanvas(canvas, filename) {
   link.click();
 }
 
-function drawLineSeries(ctx, points, color, theme) {
+function canvasToJpegUint8(canvas, quality = 0.92) {
+  const dataUrl = canvas.toDataURL("image/jpeg", quality);
+  const base64 = dataUrl.split(",")[1] || "";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function downloadCanvasPdf(canvas, filename) {
+  if (!canvas) {
+    return;
+  }
+  const w = canvas.width;
+  const h = canvas.height;
+  const jpeg = canvasToJpegUint8(canvas);
+  const enc = new TextEncoder();
+  const chunks = [];
+  let size = 0;
+
+  const add = (part) => {
+    const bytes = typeof part === "string" ? enc.encode(part) : part;
+    chunks.push(bytes);
+    size += bytes.length;
+    return size;
+  };
+
+  const offsets = new Array(6).fill(0);
+  add("%PDF-1.4\n");
+
+  offsets[1] = size;
+  add("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+
+  offsets[2] = size;
+  add("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
+
+  offsets[3] = size;
+  add(
+    `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n`
+  );
+
+  offsets[4] = size;
+  add(
+    `4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`
+  );
+  add(jpeg);
+  add("\nendstream\nendobj\n");
+
+  const content = `q\n${w} 0 0 ${h} 0 0 cm\n/Im0 Do\nQ\n`;
+  offsets[5] = size;
+  add(`5 0 obj\n<< /Length ${content.length} >>\nstream\n${content}endstream\nendobj\n`);
+
+  const xrefStart = size;
+  let xref = "xref\n0 6\n0000000000 65535 f \n";
+  for (let i = 1; i <= 5; i += 1) {
+    xref += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`;
+  }
+  add(xref);
+  add(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`);
+
+  const out = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  downloadBlob(new Blob([out], { type: "application/pdf" }), filename);
+}
+
+function downloadCanvasEps(canvas, filename) {
+  if (!canvas) {
+    return;
+  }
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // Downscale very large canvases for manageable EPS size.
+  const maxSide = 1600;
+  const scale = Math.min(1, maxSide / Math.max(w, h));
+  const ew = Math.max(1, Math.round(w * scale));
+  const eh = Math.max(1, Math.round(h * scale));
+  const tmp = document.createElement("canvas");
+  tmp.width = ew;
+  tmp.height = eh;
+  const tctx = tmp.getContext("2d");
+  tctx.fillStyle = "#ffffff";
+  tctx.fillRect(0, 0, ew, eh);
+  tctx.drawImage(canvas, 0, 0, ew, eh);
+  const img = tctx.getImageData(0, 0, ew, eh).data;
+
+  const hexRows = [];
+  let row = "";
+  for (let i = 0; i < img.length; i += 4) {
+    const r = img[i].toString(16).padStart(2, "0");
+    const g = img[i + 1].toString(16).padStart(2, "0");
+    const b = img[i + 2].toString(16).padStart(2, "0");
+    row += r + g + b;
+    if (row.length >= 144) {
+      hexRows.push(row);
+      row = "";
+    }
+  }
+  if (row) {
+    hexRows.push(row);
+  }
+
+  const eps = [
+    "%!PS-Adobe-3.0 EPSF-3.0",
+    `%%BoundingBox: 0 0 ${ew} ${eh}`,
+    "%%LanguageLevel: 2",
+    "%%Pages: 1",
+    "%%EndComments",
+    "gsave",
+    `${ew} ${eh} scale`,
+    `${ew} ${eh} 8 [${ew} 0 0 -${eh} 0 ${eh}]`,
+    "{ currentfile 3 string readhexstring pop } bind",
+    "false 3 colorimage",
+    ...hexRows,
+    "grestore",
+    "showpage",
+    "%%EOF",
+    "",
+  ].join("\n");
+
+  downloadBlob(new Blob([eps], { type: "application/postscript" }), filename);
+}
+
+function FigureExportButtons({ canvasId, baseName }) {
+  return (
+    <div className="export-btn-group" role="group" aria-label={`Export ${baseName}`}>
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() => downloadCanvas(document.getElementById(canvasId), `${baseName}.png`)}
+      >
+        Export PNG
+      </button>
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() => downloadCanvasPdf(document.getElementById(canvasId), `${baseName}.pdf`)}
+      >
+        Export PDF
+      </button>
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        onClick={() => downloadCanvasEps(document.getElementById(canvasId), `${baseName}.eps`)}
+      >
+        Export EPS
+      </button>
+    </div>
+  );
+}
+
+function drawLineSeries(ctx, points, color, theme, dashed = false) {
   if (points.length < 2) {
     return;
   }
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  // Long dash / gap so a solid under-series (val) remains visible through the gaps.
+  const dash = dashed
+    ? [Math.max(14, theme.seriesLineWidth * 6), Math.max(10, theme.seriesLineWidth * 4.5)]
+    : [];
+
   ctx.strokeStyle = color;
-  ctx.lineWidth = theme.seriesLineWidth;
+  ctx.lineWidth = dashed ? theme.seriesLineWidth + 1.4 : theme.seriesLineWidth;
+  ctx.setLineDash(dash);
   ctx.beginPath();
   ctx.moveTo(points[0].x, points[0].y);
   for (let i = 1; i < points.length; i += 1) {
     ctx.lineTo(points[i].x, points[i].y);
   }
   ctx.stroke();
+  ctx.setLineDash([]);
 }
 
-function drawPointSeries(ctx, points, color, theme) {
+function drawPointSeries(ctx, points, color, theme, hollow = false) {
   if (!points.length) {
     return;
   }
 
-  ctx.fillStyle = color;
-  ctx.strokeStyle = "rgba(15, 23, 42, 0.35)";
-  ctx.lineWidth = theme.pointStrokeWidth;
+  ctx.lineWidth = theme.pointStrokeWidth + (hollow ? 1 : 0);
 
   for (const p of points) {
     ctx.beginPath();
-    ctx.arc(p.x, p.y, theme.pointRadius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    ctx.arc(p.x, p.y, theme.pointRadius + (hollow ? 1 : 0), 0, Math.PI * 2);
+    if (hollow) {
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = color;
+      ctx.strokeStyle = "rgba(15, 23, 42, 0.35)";
+      ctx.fill();
+      ctx.stroke();
+    }
   }
 }
 
@@ -293,16 +549,18 @@ function formatAccTickLabel(t) {
   return (Math.round(t * 10) / 10).toFixed(1);
 }
 
-function drawLegendMarkerLine(ctx, x, y, color, theme) {
+function drawLegendMarkerLine(ctx, x, y, color, theme, dashed = false) {
   const { lineW, dotR, markerStroke } = theme.legend;
   const mid = lineW / 2;
   ctx.strokeStyle = color;
   ctx.lineWidth = markerStroke;
   ctx.lineCap = "round";
+  ctx.setLineDash(dashed ? [Math.max(3, lineW / 5), Math.max(2, lineW / 6)] : []);
   ctx.beginPath();
   ctx.moveTo(x, y);
   ctx.lineTo(x + lineW, y);
   ctx.stroke();
+  ctx.setLineDash([]);
 
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -425,7 +683,7 @@ function paintSeriesLegend(ctx, theme, layout, boxLeft, boxTop) {
 
     row.forEach((item) => {
       if (item.marker === "line") {
-        drawLegendMarkerLine(ctx, x, y, item.color, theme);
+        drawLegendMarkerLine(ctx, x, y, item.color, theme, !!item.dashed);
       } else {
         drawLegendMarkerSquare(ctx, x, y, item.color, theme);
       }
@@ -441,7 +699,7 @@ function paintSeriesLegend(ctx, theme, layout, boxLeft, boxTop) {
   ctx.textBaseline = "alphabetic";
 }
 
-/** Layout uses this as max row width; large value keeps every item on one horizontal row. */
+/** Keep legend items on a single horizontal row. */
 const LEGEND_SINGLE_ROW_PACK_WIDTH = 1e6;
 
 /**
@@ -469,6 +727,37 @@ function drawInsetSeriesLegend(ctx, items, theme, plotLeft, plotTop, plotRight, 
   paintSeriesLegend(ctx, theme, { ...layout, boxWidth }, boxLeft, boxTop);
   return { left: boxLeft, top: boxTop, width: boxWidth, height: boxHeight };
 }
+
+function SeriesLegendBar({ items }) {
+  return (
+    <ul className="series-legend-bar" aria-label="Chart series legend">
+      {items.map((item) => (
+        <li key={item.label} className="series-legend-bar__item">
+          <span
+            className={`series-legend-bar__swatch series-legend-bar__swatch--${item.marker || "line"}${
+              item.dashed ? " is-dashed" : ""
+            }${item.hollow ? " is-hollow" : ""}`}
+            style={{ "--swatch-color": item.color }}
+            aria-hidden="true"
+          />
+          <span>{item.label}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const GLOBAL_SERIES_LEGEND = [
+  { label: "Val Accuracy", color: "#2563eb", marker: "line", dashed: false, hollow: false },
+  { label: "Val Loss", color: "#dc2626", marker: "line", dashed: false, hollow: false },
+  { label: "connected", color: "#059669", marker: "square" },
+  { label: "disconnected", color: "#dc2626", marker: "square" },
+];
+
+const CV_SERIES_LEGEND = [
+  { label: "Val Accuracy", color: "#2563eb", marker: "line", dashed: false, hollow: false },
+  { label: "Val Loss", color: "#dc2626", marker: "line", dashed: false, hollow: false },
+];
 
 function ChartFontToolbar({ ariaLabel, scale, onChange }) {
   return (
@@ -621,14 +910,7 @@ function drawGlobalEvolution(canvas, history, theme, legendNudge = { dx: 0, dy: 
 
   const left = theme.plotLeftGutter;
   const right = width - theme.plotRightGutter;
-  const legend = [
-    { label: "train acc", color: "#059669", marker: "line" },
-    { label: "val acc", color: "#2563eb", marker: "line" },
-    { label: "train loss", color: "#d97706", marker: "line" },
-    { label: "val loss", color: "#dc2626", marker: "line" },
-    { label: "connected", color: "#059669", marker: "square" },
-    { label: "disconnected", color: "#dc2626", marker: "square" },
-  ];
+  const legend = GLOBAL_SERIES_LEGEND;
   const top = chartPx(theme.scale, 14);
   const rounds = history.map((h) => Number(h.round));
   const maxRound = Math.max(...rounds);
@@ -643,7 +925,7 @@ function drawGlobalEvolution(canvas, history, theme, legendNudge = { dx: 0, dy: 
   const bottom = statusTop - ev.plotBottomGap;
   const lossMax = Math.max(
     1,
-    ...history.flatMap((h) => [h.train_loss ?? 0, h.val_loss ?? 0])
+    ...history.flatMap((h) => [Number(h.val_loss ?? h.loss ?? 0)])
   );
 
   const plotPadX = theme.plotPadX;
@@ -658,10 +940,14 @@ function drawGlobalEvolution(canvas, history, theme, legendNudge = { dx: 0, dy: 
   const yAcc = (v) => bottom - v * (bottom - top);
   const yLoss = (v) => bottom - (v / lossMax) * (bottom - top);
 
-  const trainAccPoints = history.map((h) => ({ x: xForRound(h.round), y: yAcc(h.train_acc ?? 0) }));
-  const valAccPoints = history.map((h) => ({ x: xForRound(h.round), y: yAcc(h.val_acc ?? 0) }));
-  const trainLossPoints = history.map((h) => ({ x: xForRound(h.round), y: yLoss(h.train_loss ?? 0) }));
-  const valLossPoints = history.map((h) => ({ x: xForRound(h.round), y: yLoss(h.val_loss ?? 0) }));
+  const valAccPoints = history.map((h) => ({
+    x: xForRound(h.round),
+    y: yAcc(Number(h.val_acc ?? h.val_accuracy ?? h.accuracy ?? 0)),
+  }));
+  const valLossPoints = history.map((h) => ({
+    x: xForRound(h.round),
+    y: yLoss(Number(h.val_loss ?? h.loss ?? 0)),
+  }));
 
   const clipTop = top - ev.clipTopPad;
   ctx.save();
@@ -684,14 +970,10 @@ function drawGlobalEvolution(canvas, history, theme, legendNudge = { dx: 0, dy: 
     ctx.stroke();
   }
 
-  drawLineSeries(ctx, trainAccPoints, "#059669", theme);
-  drawLineSeries(ctx, valAccPoints, "#2563eb", theme);
-  drawLineSeries(ctx, trainLossPoints, "#d97706", theme);
-  drawLineSeries(ctx, valLossPoints, "#dc2626", theme);
-  drawPointSeries(ctx, trainAccPoints, "#059669", theme);
-  drawPointSeries(ctx, valAccPoints, "#2563eb", theme);
-  drawPointSeries(ctx, trainLossPoints, "#d97706", theme);
-  drawPointSeries(ctx, valLossPoints, "#dc2626", theme);
+  drawLineSeries(ctx, valAccPoints, "#2563eb", theme, false);
+  drawLineSeries(ctx, valLossPoints, "#dc2626", theme, false);
+  drawPointSeries(ctx, valAccPoints, "#2563eb", theme, false);
+  drawPointSeries(ctx, valLossPoints, "#dc2626", theme, false);
 
   ctx.restore();
 
@@ -764,12 +1046,7 @@ function drawCrossValidation(canvas, foldResults, theme, legendNudge = { dx: 0, 
 
   const left = theme.plotLeftGutter;
   const right = width - theme.plotRightGutter;
-  const legend = [
-    { label: "Train Accuracy", color: "#059669", marker: "line" },
-    { label: "Val Accuracy", color: "#2563eb", marker: "line" },
-    { label: "Train Loss", color: "#d97706", marker: "line" },
-    { label: "Val Loss", color: "#dc2626", marker: "line" },
-  ];
+  const legend = CV_SERIES_LEGEND;
   const top = chartPx(theme.scale, 12);
   const bottom = height - cv.bottomReserve;
   const plotPadX = theme.plotPadX;
@@ -782,12 +1059,7 @@ function drawCrossValidation(canvas, foldResults, theme, legendNudge = { dx: 0, 
   const count = foldResults.length;
   const maxLoss = Math.max(
     1,
-    ...foldResults.map((f) =>
-      Math.max(
-        Number(f.train_loss ?? f.loss ?? 0),
-        Number(f.val_loss ?? f.loss ?? 0)
-      )
-    )
+    ...foldResults.map((f) => Number(f.val_loss ?? f.loss ?? 0))
   );
   drawDualAxisTicks(ctx, left, right, plotTop, plotBottom, maxLoss, theme);
   drawDualAxes(ctx, left, right, plotTop, plotBottom, theme);
@@ -809,31 +1081,19 @@ function drawCrossValidation(canvas, foldResults, theme, legendNudge = { dx: 0, 
   const yAcc = (v) => plotBottom - v * (plotBottom - plotTop);
   const yLoss = (v) => plotBottom - (v / maxLoss) * (plotBottom - plotTop);
 
-  const trainAccPts = foldResults.map((f, i) => ({
-    x: xFor(i),
-    y: yAcc(Number(f.train_accuracy ?? f.accuracy ?? 0)),
-  }));
   const valAccPts = foldResults.map((f, i) => ({
     x: xFor(i),
     y: yAcc(Number(f.val_accuracy ?? f.accuracy ?? 0)),
-  }));
-  const trainLossPts = foldResults.map((f, i) => ({
-    x: xFor(i),
-    y: yLoss(Number(f.train_loss ?? f.loss ?? 0)),
   }));
   const valLossPts = foldResults.map((f, i) => ({
     x: xFor(i),
     y: yLoss(Number(f.val_loss ?? f.loss ?? 0)),
   }));
 
-  drawLineSeries(ctx, trainAccPts, "#059669", theme);
-  drawLineSeries(ctx, valAccPts, "#2563eb", theme);
-  drawLineSeries(ctx, trainLossPts, "#d97706", theme);
-  drawLineSeries(ctx, valLossPts, "#dc2626", theme);
-  drawPointSeries(ctx, trainAccPts, "#059669", theme);
-  drawPointSeries(ctx, valAccPts, "#2563eb", theme);
-  drawPointSeries(ctx, trainLossPts, "#d97706", theme);
-  drawPointSeries(ctx, valLossPts, "#dc2626", theme);
+  drawLineSeries(ctx, valAccPts, "#2563eb", theme, false);
+  drawLineSeries(ctx, valLossPts, "#dc2626", theme, false);
+  drawPointSeries(ctx, valAccPts, "#2563eb", theme, false);
+  drawPointSeries(ctx, valLossPts, "#dc2626", theme, false);
 
   const legendRect = drawInsetSeriesLegend(
     ctx,
@@ -863,31 +1123,34 @@ function drawCrossValidation(canvas, foldResults, theme, legendNudge = { dx: 0, 
   return { legendRect };
 }
 
-/** Class names on confusion matrix axes (e.g. cat, truck); bold + mono for readability. */
-function confusionMatrixCategoryFont(axisFontPx) {
-  return `800 ${axisFontPx}px JetBrains Mono, monospace`;
+/** Seaborn-like Blues colormap stops (light → dark). */
+const CM_BLUES = [
+  [247, 251, 255],
+  [222, 235, 247],
+  [198, 219, 239],
+  [158, 202, 225],
+  [107, 174, 214],
+  [66, 146, 198],
+  [33, 113, 181],
+  [8, 81, 156],
+  [8, 48, 107],
+];
+
+function confusionMatrixBlue(t) {
+  const x = Math.max(0, Math.min(1, t));
+  const scaled = x * (CM_BLUES.length - 1);
+  const i = Math.min(CM_BLUES.length - 2, Math.floor(scaled));
+  const f = scaled - i;
+  const a = CM_BLUES[i];
+  const b = CM_BLUES[i + 1];
+  const r = Math.round(a[0] + (b[0] - a[0]) * f);
+  const g = Math.round(a[1] + (b[1] - a[1]) * f);
+  const bl = Math.round(a[2] + (b[2] - a[2]) * f);
+  return `rgb(${r},${g},${bl})`;
 }
 
-/** Horizontal column headers: true if centered labels fit between neighbor column centers. */
-function confusionMatrixTopLabelsFitHorizontally(ctx, axisFontPx, n, labels, showTick, cell) {
-  ctx.font = confusionMatrixCategoryFont(axisFontPx);
-  const shown = [];
-  for (let i = 0; i < n; i += 1) {
-    if (!showTick(i)) {
-      continue;
-    }
-    const label = String(labels?.[i] ?? i).slice(0, n > 60 ? 3 : 12);
-    shown.push({ i, w: ctx.measureText(label).width });
-  }
-  for (let k = 0; k < shown.length - 1; k += 1) {
-    const a = shown[k];
-    const b = shown[k + 1];
-    const dist = (b.i - a.i) * cell;
-    if ((a.w + b.w) / 2 > dist * 0.94) {
-      return false;
-    }
-  }
-  return true;
+function confusionMatrixCategoryFont(axisFontPx) {
+  return `700 ${axisFontPx}px Plus Jakarta Sans, system-ui, sans-serif`;
 }
 
 function drawConfusionMatrix(canvas, matrix, labels, theme) {
@@ -920,44 +1183,54 @@ function drawConfusionMatrix(canvas, matrix, labels, theme) {
   const tickEvery = n <= 12 ? 1 : n <= 24 ? 2 : n <= 50 ? 5 : n <= 100 ? 10 : 20;
   const showTick = (i) => i === 0 || i === n - 1 || i % tickEvery === 0;
   const showCellValues = n <= 20;
-  /** Start size; reduced in the layout loop until horizontal top labels fit (reference-style row). */
-  let axisFontPx = n > 80 ? p(17) : n > 40 ? p(20) : n > 20 ? p(21) : p(21);
-  const titleFontPx = n > 40 ? p(15) : p(14);
+  const titleFontPx = n > 40 ? p(20) : p(22);
+  const labelAngle = -Math.PI / 4; // -45°, seaborn-style (bottom ticks)
+  const cosA = Math.abs(Math.cos(labelAngle));
+  const sinA = Math.abs(Math.sin(labelAngle));
 
-  const yTickToHeatmapGap = p(13);
+  const yTickToHeatmapGap = p(16);
   const yTitleGap = p(18);
+  ctx.font = `700 ${titleFontPx}px Plus Jakarta Sans, system-ui, sans-serif`;
+  const trueLabelRotatedHSpan = Math.ceil(titleFontPx * 1.4);
 
-  ctx.font = `500 ${titleFontPx}px Plus Jakarta Sans, system-ui, sans-serif`;
-  const trueClassRotatedHSpan = Math.ceil(titleFontPx * 1.35);
+  const colorBarW = p(22);
+  const colorBarGap = p(18);
+  const colorBarTickGap = p(8);
+  const colorBarTitleGap = p(42);
+  const padR = colorBarGap + colorBarW + colorBarTitleGap + p(58);
+  const padT = p(28);
+  const predictTitleGap = p(22);
+  const minAxisPx = 13;
+  const maxAxisPx = n > 80 ? p(18) : n > 40 ? p(22) : n > 20 ? p(24) : p(28);
 
-  const padR = p(48);
-  const padB = p(162);
-  const basePadT = showCellValues ? p(72) : p(80);
-  const tickYOffset = p(16);
-  const minAxisPx = 7;
+  const formatLabel = (i) => String(labels?.[i] ?? i).slice(0, n > 60 ? 4 : n > 20 ? 12 : 16);
 
-  let padL = p(58);
-  let size = 0;
-  let cell = 0;
-  let x0 = padL;
-  let y0 = basePadT;
+  let axisFontPx = maxAxisPx;
+  let padL = p(120);
+  let padB = p(200);
+  let size = Math.min(width - padL - padR, height - padT - padB);
+  let cell = size / Math.max(n, 1);
+  let maxLabelW = 0;
 
-  for (let iter = 0; iter < 24; iter += 1) {
+  for (let iter = 0; iter < 28; iter += 1) {
     ctx.font = confusionMatrixCategoryFont(axisFontPx);
-    let maxYTickW = 0;
+    maxLabelW = 0;
     for (let i = 0; i < n; i += 1) {
-      if (!showTick(i)) {
-        continue;
-      }
-      const label = String(labels?.[i] ?? i).slice(0, n > 60 ? 3 : 12);
-      maxYTickW = Math.max(maxYTickW, ctx.measureText(label).width);
+      if (!showTick(i)) continue;
+      maxLabelW = Math.max(maxLabelW, ctx.measureText(formatLabel(i)).width);
     }
 
-    padL = Math.max(
-      p(58),
-      maxYTickW + yTickToHeatmapGap + yTitleGap + trueClassRotatedHSpan + p(12)
+    const bottomHorizSpan = maxLabelW * cosA + axisFontPx * sinA;
+    const bottomVertSpan = maxLabelW * sinA + axisFontPx * cosA;
+    padB = Math.max(
+      p(100),
+      Math.ceil(bottomVertSpan + predictTitleGap + titleFontPx + p(28))
     );
-    size = Math.min(width - padL - padR, height - basePadT - padB);
+    padL = Math.max(
+      p(72),
+      Math.ceil(maxLabelW + yTickToHeatmapGap + yTitleGap + trueLabelRotatedHSpan + p(14))
+    );
+    size = Math.min(width - padL - padR, height - padT - padB);
     if (size < 40) {
       ctx.fillStyle = "#000000";
       ctx.font = theme.cmErrFont;
@@ -965,34 +1238,29 @@ function drawConfusionMatrix(canvas, matrix, labels, theme) {
       return;
     }
     cell = size / n;
-
-    if (confusionMatrixTopLabelsFitHorizontally(ctx, axisFontPx, n, labels, showTick, cell)) {
-      x0 = padL;
-      y0 = basePadT;
-      break;
-    }
-    if (axisFontPx <= minAxisPx) {
-      x0 = padL;
-      y0 = basePadT;
+    const gap = Math.max(1, tickEvery) * cell;
+    if (bottomHorizSpan <= gap * 0.92 || axisFontPx <= minAxisPx) {
       break;
     }
     axisFontPx -= 1;
   }
 
   ctx.font = confusionMatrixCategoryFont(axisFontPx);
-  let maxYTickW = 0;
+  maxLabelW = 0;
   for (let i = 0; i < n; i += 1) {
-    if (!showTick(i)) {
-      continue;
-    }
-    const label = String(labels?.[i] ?? i).slice(0, n > 60 ? 3 : 12);
-    maxYTickW = Math.max(maxYTickW, ctx.measureText(label).width);
+    if (!showTick(i)) continue;
+    maxLabelW = Math.max(maxLabelW, ctx.measureText(formatLabel(i)).width);
   }
-  padL = Math.max(
-    p(58),
-    maxYTickW + yTickToHeatmapGap + yTitleGap + trueClassRotatedHSpan + p(12)
+  const bottomVertSpan = maxLabelW * sinA + axisFontPx * cosA;
+  padB = Math.max(
+    p(100),
+    Math.ceil(bottomVertSpan + predictTitleGap + titleFontPx + p(28))
   );
-  size = Math.min(width - padL - padR, height - basePadT - padB);
+  padL = Math.max(
+    p(72),
+    Math.ceil(maxLabelW + yTickToHeatmapGap + yTitleGap + trueLabelRotatedHSpan + p(14))
+  );
+  size = Math.min(width - padL - padR, height - padT - padB);
   if (size < 40) {
     ctx.fillStyle = "#000000";
     ctx.font = theme.cmErrFont;
@@ -1000,39 +1268,34 @@ function drawConfusionMatrix(canvas, matrix, labels, theme) {
     return;
   }
   cell = size / n;
-  x0 = padL;
-  y0 = basePadT;
-
+  const x0 = padL;
+  const y0 = padT;
   const maxVal = Math.max(...matrix.flat(), 1e-6);
   const showCellBorders = cell >= 3 || n <= 32;
   const subtleBorder = cell >= 1.2 && cell < 3;
-  const heatmapNoteY = p(42);
-  const predictTitleDy = p(34);
-  const barH = p(20);
-  const barGap = p(50);
 
   for (let r = 0; r < n; r += 1) {
     for (let c = 0; c < n; c += 1) {
       const val = matrix[r][c];
-      const alpha = Math.min(1, val / maxVal);
-      ctx.fillStyle = `rgba(37,99,235,${0.18 + alpha * 0.78})`;
+      const t = Math.min(1, val / maxVal);
+      ctx.fillStyle = confusionMatrixBlue(t);
       ctx.fillRect(x0 + c * cell, y0 + r * cell, cell, cell);
       if (showCellBorders) {
-        ctx.strokeStyle = "#e2e8f0";
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = Math.max(1, Math.min(2, cell * 0.04));
         ctx.strokeRect(x0 + c * cell, y0 + r * cell, cell, cell);
       } else if (subtleBorder) {
-        ctx.strokeStyle = "rgba(226,232,240,0.35)";
+        ctx.strokeStyle = "rgba(255,255,255,0.55)";
         ctx.lineWidth = 0.5;
         ctx.strokeRect(x0 + c * cell, y0 + r * cell, cell, cell);
       }
 
       if (showCellValues) {
-        const cellFontMax = n <= 12 ? 0.26 : 0.3;
-        ctx.font = `${Math.max(p(9), Math.min(p(19), Math.floor(cell * cellFontMax)))}px JetBrains Mono, monospace`;
+        const cellFontMax = n <= 12 ? 0.28 : 0.3;
+        ctx.font = `600 ${Math.max(p(9), Math.min(p(18), Math.floor(cell * cellFontMax)))}px Plus Jakarta Sans, system-ui, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillStyle = alpha > 0.5 ? "#ffffff" : "#000000";
+        ctx.fillStyle = t > 0.55 ? "#ffffff" : "#111827";
         ctx.fillText(
           Number(val).toFixed(1),
           x0 + c * cell + cell / 2,
@@ -1042,64 +1305,106 @@ function drawConfusionMatrix(canvas, matrix, labels, theme) {
     }
   }
 
-  ctx.fillStyle = "#000000";
+  ctx.fillStyle = "#111827";
   ctx.font = confusionMatrixCategoryFont(axisFontPx);
+  ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-
   for (let i = 0; i < n; i += 1) {
-    if (!showTick(i)) {
-      continue;
-    }
-    const label = String(labels?.[i] ?? i).slice(0, n > 60 ? 3 : 12);
+    if (!showTick(i)) continue;
+    ctx.fillText(formatLabel(i), x0 - yTickToHeatmapGap, y0 + i * cell + cell / 2);
+  }
+
+  // Predicted class names under the heatmap (45°, matplotlib ha='right').
+  for (let i = 0; i < n; i += 1) {
+    if (!showTick(i)) continue;
+    const label = formatLabel(i);
     const cx = x0 + i * cell + cell / 2;
-    ctx.textAlign = "center";
-    ctx.fillText(label, cx, y0 - tickYOffset);
+    const cy = y0 + size + p(10);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(labelAngle);
     ctx.textAlign = "right";
-    ctx.fillText(label, x0 - yTickToHeatmapGap, y0 + i * cell + cell / 2);
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "#111827";
+    ctx.font = confusionMatrixCategoryFont(axisFontPx);
+    ctx.fillText(label, 0, 0);
+    ctx.restore();
   }
 
-  if (!showCellValues) {
-    ctx.fillStyle = "#000000";
-    ctx.font = theme.cmNoteFont;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-    ctx.fillText(
-      `Heatmap only (${n}×${n} classes); values omitted for readability — use Export PNG to inspect pixels.`,
-      x0,
-      y0 - heatmapNoteY
-    );
-  }
-
-  ctx.fillStyle = "#000000";
-  ctx.font = `500 ${titleFontPx}px Plus Jakarta Sans, system-ui, sans-serif`;
+  ctx.fillStyle = "#111827";
+  ctx.font = `700 ${titleFontPx}px Plus Jakarta Sans, system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
-  ctx.fillText("Predicted class", x0 + size / 2, y0 + size + predictTitleDy);
+  ctx.fillText(
+    "Predicted Label",
+    x0 + size / 2,
+    y0 + size + bottomVertSpan + predictTitleGap + titleFontPx
+  );
+
   ctx.save();
-  const yLabelRightX = x0 - yTickToHeatmapGap;
-  const trueClassCenterX = yLabelRightX - maxYTickW - yTitleGap - trueClassRotatedHSpan / 2;
-  ctx.translate(trueClassCenterX, y0 + size / 2);
+  const trueLabelCenterX =
+    x0 - yTickToHeatmapGap - maxLabelW - yTitleGap - trueLabelRotatedHSpan / 2;
+  ctx.translate(trueLabelCenterX, y0 + size / 2);
   ctx.rotate(-Math.PI / 2);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("True class", 0, 0);
+  ctx.fillText("True Label", 0, 0);
   ctx.restore();
 
-  const barY = y0 + size + barGap;
-  const grad = ctx.createLinearGradient(x0, 0, x0 + size, 0);
-  grad.addColorStop(0, "rgba(37,99,235,0.18)");
-  grad.addColorStop(1, "rgba(37,99,235,0.96)");
+  const barX = x0 + size + colorBarGap;
+  const barY = y0;
+  const barH = size;
+  const grad = ctx.createLinearGradient(0, barY + barH, 0, barY);
+  for (let i = 0; i < CM_BLUES.length; i += 1) {
+    grad.addColorStop(i / (CM_BLUES.length - 1), confusionMatrixBlue(i / (CM_BLUES.length - 1)));
+  }
   ctx.fillStyle = grad;
-  ctx.fillRect(x0, barY, size, barH);
-  ctx.strokeStyle = "#cbd5e1";
-  ctx.strokeRect(x0, barY, size, barH);
-  ctx.fillStyle = "#000000";
-  ctx.font = theme.axisTitleFont;
+  ctx.fillRect(barX, barY, colorBarW, barH);
+  ctx.strokeStyle = "#64748b";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(barX, barY, colorBarW, barH);
+
+  const tickFontPx = Math.max(p(12), Math.min(p(15), Math.floor(axisFontPx * 0.65)));
+  ctx.font = `600 ${tickFontPx}px Plus Jakarta Sans, system-ui, sans-serif`;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText("low", x0, barY + barH / 2);
-  ctx.textAlign = "right";
-  ctx.fillText("high", x0 + size, barY + barH / 2);
+  ctx.fillStyle = "#111827";
+
+  const niceStep = (() => {
+    const rough = maxVal / 4;
+    const pow = 10 ** Math.floor(Math.log10(Math.max(rough, 1e-6)));
+    const nrm = rough / pow;
+    const step = nrm <= 1.5 ? 1 : nrm <= 3 ? 2 : nrm <= 7 ? 5 : 10;
+    return step * pow;
+  })();
+  const ticks = [];
+  for (let v = 0; v <= maxVal + niceStep * 0.01; v += niceStep) {
+    ticks.push(v);
+  }
+  if (ticks[ticks.length - 1] < maxVal * 0.92) {
+    ticks.push(maxVal);
+  }
+  for (const v of ticks) {
+    const t = Math.min(1, v / maxVal);
+    const ty = barY + barH - t * barH;
+    ctx.beginPath();
+    ctx.moveTo(barX + colorBarW, ty);
+    ctx.lineTo(barX + colorBarW + p(4), ty);
+    ctx.strokeStyle = "#64748b";
+    ctx.stroke();
+    const label = Number.isInteger(v) || v >= 10 ? String(Math.round(v)) : v.toFixed(1);
+    ctx.fillText(label, barX + colorBarW + colorBarTickGap, ty);
+  }
+
+  ctx.save();
+  ctx.translate(barX + colorBarW + colorBarTitleGap + tickFontPx, barY + barH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `700 ${titleFontPx}px Plus Jakarta Sans, system-ui, sans-serif`;
+  ctx.fillStyle = "#111827";
+  ctx.fillText("Mean Count", 0, 0);
+  ctx.restore();
 }
 
 export default function App() {
@@ -1315,10 +1620,10 @@ export default function App() {
     drawConfusionMatrix(
       document.getElementById(cmCanvasId),
       cvData?.mean_confusion_matrix || [],
-      cvData?.labels || [],
+      resolveConfusionLabels(cvData, state),
       confusionTheme
     );
-  }, [cvData, confusionTheme, cmDim.w, cmDim.h]);
+  }, [cvData, state.class_labels, state.config?.dataset_name, confusionTheme, cmDim.w, cmDim.h]);
 
   function onEvolutionLegendPointerDown(e) {
     const canvas = e.currentTarget;
@@ -1620,17 +1925,12 @@ export default function App() {
           <div className="graph-toolbar__title">
             <h2>Global model evolution</h2>
             <p className="section-desc graph-legend-hint">
-              Drag the legend inside the plot to reposition it (saved in this browser).
+              Validation accuracy and loss over rounds (legend). Drag the legend to reposition it.
             </p>
           </div>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => downloadCanvas(document.getElementById(evolutionCanvasId), "global-evolution.png")}
-          >
-            Export PNG
-          </button>
+          <FigureExportButtons canvasId={evolutionCanvasId} baseName="global-evolution" />
         </div>
+        <SeriesLegendBar items={GLOBAL_SERIES_LEGEND} />
         <ChartFontToolbar
           ariaLabel="Figure text size for global model evolution"
           scale={chartFontScales.evolution}
@@ -1645,7 +1945,7 @@ export default function App() {
           className="graph-canvas graph-canvas--legend-drag"
           style={{ touchAction: "none" }}
           role="img"
-          aria-label="Global model evolution. Drag the legend box to move it."
+          aria-label="Global model evolution with validation accuracy and loss. Drag the legend box to move it."
           onPointerDown={onEvolutionLegendPointerDown}
           onPointerMove={onEvolutionLegendPointerMove}
           onPointerUp={onEvolutionLegendPointerUp}
@@ -1657,9 +1957,9 @@ export default function App() {
       <section className="card graph-card">
         <div className="graph-toolbar graph-toolbar--stack">
           <div className="graph-toolbar__title">
-            <h2>Repeated K-fold validation</h2>
+            <h2>Repeated K-fold cross-validation</h2>
             <p className="section-desc graph-legend-hint">
-              Drag the legend inside the plot to reposition it (saved in this browser).
+              Validation accuracy and loss per fold (legend). Drag the legend to reposition it.
             </p>
           </div>
           <div className="inline-controls">
@@ -1698,17 +1998,30 @@ export default function App() {
             >
               {cvLoading ? "Running…" : "Run validation"}
             </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => downloadCanvas(document.getElementById(cvCanvasId), "repeated-kfold.png")}
-            >
-              Export PNG
-            </button>
+            <FigureExportButtons canvasId={cvCanvasId} baseName="repeated-kfold" />
           </div>
         </div>
+        {cvData && (
+          <div className="metric-row cv-mean-row">
+            <article className="metric">
+              <span>Mean val accuracy</span>
+              <strong>
+                {cvData.mean_val_accuracy != null
+                  ? Number(cvData.mean_val_accuracy).toFixed(4)
+                  : "—"}
+              </strong>
+            </article>
+            <article className="metric">
+              <span>Mean val loss</span>
+              <strong>
+                {cvData.mean_val_loss != null ? Number(cvData.mean_val_loss).toFixed(4) : "—"}
+              </strong>
+            </article>
+          </div>
+        )}
+        <SeriesLegendBar items={CV_SERIES_LEGEND} />
         <ChartFontToolbar
-          ariaLabel="Figure text size for repeated K-fold validation chart"
+          ariaLabel="Figure text size for repeated K-fold cross-validation chart"
           scale={chartFontScales.cv}
           onChange={(next) => setChartFontScales((prev) => ({ ...prev, cv: clampChartFontScale(next) }))}
         />
@@ -1719,7 +2032,7 @@ export default function App() {
           className="graph-canvas graph-canvas--legend-drag"
           style={{ touchAction: "none" }}
           role="img"
-          aria-label="Repeated K-fold validation chart. Drag the legend box to move it."
+          aria-label="Repeated K-fold cross-validation chart with validation accuracy and loss. Drag the legend box to move it."
           onPointerDown={onCvLegendPointerDown}
           onPointerMove={onCvLegendPointerMove}
           onPointerUp={onCvLegendPointerUp}
@@ -1728,18 +2041,96 @@ export default function App() {
         />
       </section>
 
+      {cvData?.stats_table?.length > 0 && (
+        <section className="card stats-table-card">
+          <div className="graph-toolbar">
+            <div className="graph-toolbar__title">
+              <h2>Repeated K-fold statistics</h2>
+              <p className="section-desc">
+                Held-out fold validation only — the global model is frozen (no retraining).
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => downloadStatsTableCsv(cvData.stats_table)}
+            >
+              Export CSV
+            </button>
+          </div>
+
+          <div className="stats-panel">
+            <div className="stats-panel__meta">
+              <span className="stats-pill">
+                {cvData.k_folds ?? "—"}-fold × {cvData.repeats ?? "—"} repeats
+              </span>
+              <span className="stats-pill stats-pill--muted">
+                {cvData.total_folds ?? cvData.fold_results?.length ?? "—"} folds total
+              </span>
+              {cvData.sample_count != null && (
+                <span className="stats-pill stats-pill--muted">
+                  {cvData.sample_count} samples
+                </span>
+              )}
+            </div>
+
+            <div className="stats-table-wrap">
+              <table className="stats-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Metric</th>
+                    <th scope="col">Mean ± Std</th>
+                    <th scope="col">95% CI</th>
+                    <th scope="col">
+                      <em>p</em>-value
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cvData.stats_table.map((row) => {
+                    const isAcc = String(row.metric).toLowerCase().includes("accuracy");
+                    const pRaw = Number(row.p_value);
+                    const significant = Number.isFinite(pRaw) && pRaw < 0.05;
+                    return (
+                      <tr key={row.metric}>
+                        <td>
+                          <div className="stats-metric">
+                            <span
+                              className={`stats-metric__dot ${
+                                isAcc ? "stats-metric__dot--acc" : "stats-metric__dot--loss"
+                              }`}
+                              aria-hidden="true"
+                            />
+                            <span className="stats-metric__label">{row.metric}</span>
+                          </div>
+                        </td>
+                        <td className="stats-num">{row.mean_std}</td>
+                        <td className="stats-num stats-ci">{row.ci_95}</td>
+                        <td>
+                          <span
+                            className={`stats-pvalue ${
+                              significant ? "stats-pvalue--sig" : "stats-pvalue--ns"
+                            }`}
+                          >
+                            {row.p_value_display ?? String(row.p_value)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="card graph-card graph-card--confusion">
         <div className="graph-toolbar">
           <div className="graph-toolbar__title">
             <h2>Mean confusion matrix</h2>
           </div>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => downloadCanvas(document.getElementById(cmCanvasId), "mean-confusion-matrix.png")}
-          >
-            Export PNG
-          </button>
+          <FigureExportButtons canvasId={cmCanvasId} baseName="mean-confusion-matrix" />
         </div>
         <ChartFontToolbar
           ariaLabel="Figure text size for mean confusion matrix"
