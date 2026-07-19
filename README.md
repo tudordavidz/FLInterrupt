@@ -2,7 +2,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Node.js 18+](https://img.shields.io/badge/node.js-18+-green.svg)](https://nodejs.org/)
-[![GitHub](https://img.shields.io/badge/GitHub-tudordavidz%2FFLInterrupt-181717?logo=github)](https://github.com/tudordavidz/FLInterrupt)
 
 # FLInterrupt
 
@@ -16,8 +15,6 @@
 FLInterrupt is an open-source, browser-based federated learning (FL) simulator that makes **client connectivity** a first-class experimental factor. A FastAPI + PyTorch backend runs synchronous FedAvg rounds, while a React dashboard lets you configure datasets and models, **interrupt or reconnect clients while training is live**, and inspect global metrics, per-client participation, repeated K-fold validation, and mean confusion matrices.
 
 It is designed for **education**, **classroom labs**, and **early-stage research prototyping**—where controlled participation experiments and exportable figures matter more than production-scale deployment.
-
-> This repository is prepared to meet [SoftwareX (Elsevier)](https://www.sciencedirect.com/journal/softwarex) requirements: public GitHub hosting, a documented `README.md`, and an approved open-source `LICENSE.txt` (MIT).
 
 ---
 
@@ -433,5 +430,3 @@ Issues and questions: open a GitHub issue or email the corresponding author.
 ## License
 
 FLInterrupt is released under the **MIT License**. See [`LICENSE.txt`](LICENSE.txt).
-
-This is an OSI-approved license accepted by SoftwareX / Elsevier for open-source software publications.
