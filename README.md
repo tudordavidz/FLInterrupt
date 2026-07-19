@@ -37,9 +37,8 @@ It is designed for **education**, **classroom labs**, and **early-stage research
 12. [Project layout](#project-layout)
 13. [Reproducibility](#reproducibility)
 14. [Troubleshooting](#troubleshooting)
-15. [Citation](#citation)
-16. [Authors and support](#authors-and-support)
-17. [License](#license)
+15. [Authors and support](#authors-and-support)
+16. [License](#license)
 
 ---
 
@@ -377,7 +376,6 @@ Open http://localhost:8000/docs for live Swagger documentation.
 ```text
 FLInterrupt/
 ├── LICENSE.txt              # MIT license (SoftwareX-required name)
-├── Licence.txt              # Same MIT text (compatibility copy)
 ├── README.md                # This documentation
 ├── backend/
 │   ├── app/
@@ -418,27 +416,6 @@ No proprietary data are required. Benchmarks are downloaded automatically throug
 | First run is slow | Datasets and optional pretrained weights are downloading |
 | Cross-validation config mismatch | Train first with the same dataset / model / transfer-learning settings |
 | Low GPU utilization | Confirm MPS/CUDA availability; otherwise CPU is used automatically |
-
----
-
-## Citation
-
-If you use FLInterrupt in academic work, please cite this repository and the associated SoftwareX manuscript (when published):
-
-```bibtex
-@software{flinterrupt2026,
-  author       = {David, Tudor-Mihai and Udrescu, Mihai},
-  title        = {{FLInterrupt}: An interactive federated learning simulator for client connectivity experiments},
-  year         = {2026},
-  version      = {v1.0.0},
-  publisher    = {Zenodo},
-  doi          = {10.5281/zenodo.20114236},
-  url          = {https://github.com/tudordavidz/FLInterrupt},
-  license      = {MIT}
-}
-```
-
-Article preprint / journal citation will be updated here upon SoftwareX acceptance.
 
 ---
 
