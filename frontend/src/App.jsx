@@ -12,7 +12,7 @@ const defaultConfig = {
   seed: 42,
   dataset_name: "cifar10",
   data_distribution: "iid",
-  model_name: "resnet18",
+  model_name: "mobilenet_v3_small",
   transfer_learning: true,
 };
 
@@ -1420,13 +1420,14 @@ export default function App() {
     options: {
       datasets: ["cifar10"],
       distributions: ["iid", "noniid"],
-      models: ["resnet18"],
+      models: ["mobilenet_v3_small"],
     },
   });
   const [error, setError] = useState("");
   const [cvData, setCvData] = useState(null);
   const [cvLoading, setCvLoading] = useState(false);
   const [stopping, setStopping] = useState(false);
+  const [starting, setStarting] = useState(false);
 
   const [chartFontScales, setChartFontScales] = useState(loadChartFontScales);
 
@@ -1504,6 +1505,7 @@ export default function App() {
   async function start() {
     setError("");
     setStopping(false);
+    setStarting(true);
     try {
       const res = await fetch(`${API_BASE}/api/start`, {
         method: "POST",
@@ -1511,12 +1513,20 @@ export default function App() {
         body: JSON.stringify(cfg),
       });
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Could not start simulation");
+        const err = await res.json().catch(() => ({}));
+        const d = err.detail;
+        const msg = Array.isArray(d)
+          ? d.map((x) => x.msg || JSON.stringify(x)).join(" ")
+          : typeof d === "string"
+            ? d
+            : "Could not start simulation";
+        throw new Error(msg);
       }
-      refresh();
+      await refresh();
     } catch (e) {
       setError(e.message);
+    } finally {
+      setStarting(false);
     }
   }
 
@@ -1765,15 +1775,19 @@ export default function App() {
     e.currentTarget.style.cursor = "";
   }
 
-  const statusLabel = stopping ? "Stopping" : state.running ? "Running" : "Idle";
-  const isConfigLocked = state.running || stopping;
+  const statusLabel = stopping
+    ? "Stopping"
+    : starting || state.running
+      ? "Running"
+      : "Idle";
+  const isConfigLocked = state.running || stopping || starting;
 
   return (
     <div className="layout">
       <header className="hero">
         <div className="hero-top">
           <p className="eyebrow">Federated learning lab</p>
-          <span className={`status-pill status-pill--${stopping ? "stopping" : state.running ? "live" : "idle"}`}>
+          <span className={`status-pill status-pill--${stopping ? "stopping" : starting || state.running ? "live" : "idle"}`}>
             <span className="status-pill__dot" aria-hidden />
             {statusLabel}
           </span>
@@ -1868,7 +1882,7 @@ export default function App() {
         </div>
         <div className="buttons">
           <button type="button" className="btn btn-primary" onClick={start} disabled={isConfigLocked}>
-            Start run
+            {starting ? "Starting…" : "Start run"}
           </button>
           <button
             type="button"
@@ -1888,14 +1902,6 @@ export default function App() {
           <p className="section-desc">Values reflect the most recent completed aggregation step.</p>
         </div>
         <div className="metric-row">
-          <article className="metric">
-            <span>Train accuracy</span>
-            <strong>{latest ? latest.train_acc.toFixed(4) : "—"}</strong>
-          </article>
-          <article className="metric">
-            <span>Train loss</span>
-            <strong>{latest ? latest.train_loss.toFixed(4) : "—"}</strong>
-          </article>
           <article className="metric">
             <span>Val accuracy</span>
             <strong>{latest ? latest.val_acc.toFixed(4) : "—"}</strong>
@@ -2230,18 +2236,6 @@ export default function App() {
                         <div>
                           <dt>Metrics round</dt>
                           <dd>{c.metrics_round}</dd>
-                        </div>
-                      )}
-                      {c.train_acc != null && (
-                        <div>
-                          <dt>Train acc</dt>
-                          <dd>{c.train_acc.toFixed(4)}</dd>
-                        </div>
-                      )}
-                      {c.train_loss != null && (
-                        <div>
-                          <dt>Train loss</dt>
-                          <dd>{c.train_loss.toFixed(4)}</dd>
                         </div>
                       )}
                       {c.val_acc != null && (

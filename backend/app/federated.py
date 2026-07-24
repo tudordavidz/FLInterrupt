@@ -266,7 +266,7 @@ class FederatedSimulation:
             "seed": 42,
             "dataset_name": "cifar10",
             "data_distribution": "iid",
-            "model_name": "resnet18",
+            "model_name": "mobilenet_v3_small",
             "transfer_learning": True,
         }
 
@@ -289,7 +289,7 @@ class FederatedSimulation:
 
     def _build_model(self) -> nn.Module:
         return create_model(
-            model_name=str(self.config.get("model_name", "resnet18")),
+            model_name=str(self.config.get("model_name", "mobilenet_v3_small")),
             num_classes=self.num_classes,
             transfer_learning=bool(self.config.get("transfer_learning", True)),
         )
@@ -500,7 +500,8 @@ class FederatedSimulation:
                 self.num_classes,
             )
 
-            self.global_model = self._build_model().to(self.device)
+            # Model build (and any weight download) runs in the worker thread so
+            # /api/start returns immediately and the UI can show Running.
             self.running = True
 
         self._log("Simulation worker starting…")
@@ -618,6 +619,20 @@ class FederatedSimulation:
         self._log("Initializing run (RNG seeds, transforms)…")
         random.seed(int(cfg["seed"]))
         torch.manual_seed(int(cfg["seed"]))
+
+        model_name = str(cfg.get("model_name", "mobilenet_v3_small"))
+        transfer = bool(cfg.get("transfer_learning", True))
+        self._log(
+            f"Building model {model_name}"
+            f"{' with transfer learning (may download weights on first use)' if transfer else ''}…"
+        )
+        built = self._build_model().to(self.device)
+        with self.lock:
+            if self.stop_requested:
+                self._log("Simulation stop requested during model build")
+                return
+            self.global_model = built
+        self._log(f"Model ready on device={self.device}")
 
         transform = self._build_transform()
 

@@ -12,13 +12,13 @@ class SimulationConfig(BaseModel):
     num_clients: int = Field(5, ge=2, le=100)
     rounds: int = Field(5, ge=1, le=100)
     local_epochs: int = Field(1, ge=1, le=5)
-    samples_per_client: int = Field(800, ge=100, le=5000)
+    samples_per_client: int = Field(800, ge=100, le=50000)
     batch_size: int = Field(64, ge=16, le=256)
     lr: float = Field(0.01, gt=0.0, le=1.0)
     seed: int = Field(42, ge=0)
     dataset_name: str = Field("cifar10")
     data_distribution: str = Field("iid")
-    model_name: str = Field("resnet18")
+    model_name: str = Field("mobilenet_v3_small")
     transfer_learning: bool = True
 
 

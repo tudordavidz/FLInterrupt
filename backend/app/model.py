@@ -84,7 +84,7 @@ def _replace_classifier(model: nn.Module, model_name: str, num_classes: int) -> 
 
 
 def create_model(
-    model_name: str = "resnet18",
+    model_name: str = "mobilenet_v3_small",
     num_classes: int = 10,
     transfer_learning: bool = True,
 ) -> nn.Module:
