@@ -83,7 +83,7 @@ FLInterrupt is a **two-tier** application: a React/Vite dashboard (interaction +
 
 ```mermaid
 flowchart TB
-  subgraph Frontend["Frontend — React + Vite<br/>http://localhost:5173"]
+  subgraph Frontend["Frontend — React + Vite"]
     UI["Dashboard UI"]
     CFG["Experiment configuration"]
     CTRL["Interrupt / Reconnect / Start / Stop"]
@@ -91,7 +91,7 @@ flowchart TB
     EXP["Export PNG / PDF / EPS / JSON"]
   end
 
-  subgraph Backend["Backend — FastAPI + Uvicorn<br/>http://localhost:8000"]
+  subgraph Backend["Backend — FastAPI + Uvicorn"]
     API["REST API<br/>/api/start · /api/state · /api/export-config · /api/interrupt · /api/reconnect · /api/stop · /api/cross-validate"]
     ENG["Federated simulation engine<br/>PyTorch worker thread"]
     DATA["Datasets · IID / non-IID partition"]
