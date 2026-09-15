@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21442548.svg)](https://doi.org/10.5281/zenodo.21442548)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22767435.svg)](https://doi.org/10.5281/zenodo.22767435)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Node.js 18+](https://img.shields.io/badge/node.js-18+-green.svg)](https://nodejs.org/)
@@ -229,7 +229,7 @@ Aligned with the SoftwareX code/software metadata tables:
 | Documentation | this README |
 | Releases | https://github.com/tudordavidz/FLInterrupt/releases |
 | Support email | tudor.david@student.upt.ro |
-| DOI (Zenodo) | https://doi.org/10.5281/zenodo.21442548 |
+| DOI (Zenodo) | https://doi.org/10.5281/zenodo.22767435 |
 
 ---
 
