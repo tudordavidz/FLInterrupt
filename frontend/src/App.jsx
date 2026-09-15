@@ -193,7 +193,7 @@ const LABEL_MAP = {
   model_name: "Model",
   transfer_learning: "Transfer Learning",
   repeats: "Repeats",
-  k_folds: "K Folds",
+  k_folds: "Folds",
   max_samples: "Max Samples",
 };
 
@@ -293,16 +293,15 @@ function confusionMatrixCanvasDimensions(n, scale = CHART_FONT_SCALE.default) {
   };
 }
 
-function downloadStatsTableCsv(statsTable, filename = "kfold-stats-table.csv") {
+function downloadStatsTableCsv(statsTable, filename = "heldout-fold-stats.csv") {
   if (!statsTable?.length) {
     return;
   }
-  const header = ["Metric", "Mean ± Std", "95% CI", "p-value"];
+  const header = ["Metric", "Mean ± Std", "95% CI"];
   const rows = statsTable.map((row) => [
     row.metric,
     row.mean_std,
     row.ci_95,
-    row.p_value_display ?? String(row.p_value),
   ]);
   const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const csv = [header, ...rows].map((r) => r.map(escape).join(",")).join("\n");
@@ -1040,7 +1039,7 @@ function drawCrossValidation(canvas, foldResults, theme, legendNudge = { dx: 0, 
   if (!foldResults?.length) {
     ctx.fillStyle = "#64748b";
     ctx.font = theme.emptyStateFont;
-    ctx.fillText("Run repeated K-fold validation to render this graph", theme.evolution.emptyStateX, theme.evolution.emptyStateY);
+    ctx.fillText("Run repeated held-out fold evaluation to render this graph", theme.evolution.emptyStateX, theme.evolution.emptyStateY);
     return { legendRect: null };
   }
 
@@ -1153,7 +1152,7 @@ function confusionMatrixCategoryFont(axisFontPx) {
   return `700 ${axisFontPx}px Plus Jakarta Sans, system-ui, sans-serif`;
 }
 
-function drawConfusionMatrix(canvas, matrix, labels, theme) {
+function drawConfusionMatrix(canvas, matrix, labels, theme, normalizeRows = false) {
   if (!canvas) {
     return;
   }
@@ -1173,6 +1172,12 @@ function drawConfusionMatrix(canvas, matrix, labels, theme) {
   }
 
   const n = matrix.length;
+  const display = normalizeRows
+    ? matrix.map((row) => {
+        const s = row.reduce((a, b) => a + Number(b), 0);
+        return s > 0 ? row.map((v) => Number(v) / s) : row.map(() => 0);
+      })
+    : matrix;
   if (matrix.some((row) => row.length !== n)) {
     ctx.fillStyle = "#b91c1c";
     ctx.font = theme.cmErrFont;
@@ -1270,13 +1275,13 @@ function drawConfusionMatrix(canvas, matrix, labels, theme) {
   cell = size / n;
   const x0 = padL;
   const y0 = padT;
-  const maxVal = Math.max(...matrix.flat(), 1e-6);
+  const maxVal = Math.max(...display.flat(), 1e-6);
   const showCellBorders = cell >= 3 || n <= 32;
   const subtleBorder = cell >= 1.2 && cell < 3;
 
   for (let r = 0; r < n; r += 1) {
     for (let c = 0; c < n; c += 1) {
-      const val = matrix[r][c];
+      const val = display[r][c];
       const t = Math.min(1, val / maxVal);
       ctx.fillStyle = confusionMatrixBlue(t);
       ctx.fillRect(x0 + c * cell, y0 + r * cell, cell, cell);
@@ -1297,7 +1302,7 @@ function drawConfusionMatrix(canvas, matrix, labels, theme) {
         ctx.textBaseline = "middle";
         ctx.fillStyle = t > 0.55 ? "#ffffff" : "#111827";
         ctx.fillText(
-          Number(val).toFixed(1),
+          Number(val).toFixed(normalizeRows ? 2 : 1),
           x0 + c * cell + cell / 2,
           y0 + r * cell + cell / 2
         );
@@ -1403,7 +1408,7 @@ function drawConfusionMatrix(canvas, matrix, labels, theme) {
   ctx.textBaseline = "middle";
   ctx.font = `700 ${titleFontPx}px Plus Jakarta Sans, system-ui, sans-serif`;
   ctx.fillStyle = "#111827";
-  ctx.fillText("Mean Count", 0, 0);
+  ctx.fillText(normalizeRows ? "Row share" : "Mean count", 0, 0);
   ctx.restore();
 }
 
@@ -1428,6 +1433,8 @@ export default function App() {
   const [cvLoading, setCvLoading] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [scheduleText, setScheduleText] = useState("");
+  const [cmNormalized, setCmNormalized] = useState(true);
 
   const [chartFontScales, setChartFontScales] = useState(loadChartFontScales);
 
@@ -1507,10 +1514,11 @@ export default function App() {
     setStopping(false);
     setStarting(true);
     try {
+      const interruption_schedule = JSON.parse(scheduleText || "[]");
       const res = await fetch(`${API_BASE}/api/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cfg),
+        body: JSON.stringify({ ...cfg, interruption_schedule }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -1527,6 +1535,18 @@ export default function App() {
       setError(e.message);
     } finally {
       setStarting(false);
+    }
+  }
+
+  async function exportExperiment() {
+    setError("");
+    try {
+      const res = await fetch(`${API_BASE}/api/export-config`);
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      downloadBlob(blob, "flinterrupt-experiment.json");
+    } catch (e) {
+      setError(e.message || "Could not export experiment JSON");
     }
   }
 
@@ -1631,9 +1651,10 @@ export default function App() {
       document.getElementById(cmCanvasId),
       cvData?.mean_confusion_matrix || [],
       resolveConfusionLabels(cvData, state),
-      confusionTheme
+      confusionTheme,
+      cmNormalized
     );
-  }, [cvData, state.class_labels, state.config?.dataset_name, confusionTheme, cmDim.w, cmDim.h]);
+  }, [cvData, state.class_labels, state.config?.dataset_name, confusionTheme, cmDim.w, cmDim.h, cmNormalized]);
 
   function onEvolutionLegendPointerDown(e) {
     const canvas = e.currentTarget;
@@ -1786,20 +1807,24 @@ export default function App() {
     <div className="layout">
       <header className="hero">
         <div className="hero-top">
-          <p className="eyebrow">Federated learning lab</p>
+          <p className="eyebrow">Federated learning research</p>
           <span className={`status-pill status-pill--${stopping ? "stopping" : starting || state.running ? "live" : "idle"}`}>
             <span className="status-pill__dot" aria-hidden />
             {statusLabel}
           </span>
         </div>
         <h1>FL Interrupt Simulator</h1>
+        <p className="section-desc">
+          Client <strong>interruption</strong> means temporary unavailability: the client does not
+          participate in that round. Partial local work is discarded. Latency and packet loss are not simulated.
+        </p>
       </header>
 
       <div className="dashboard-grid">
       <section className="card controls">
         <div className="section-head">
           <h2>Simulation</h2>
-          <p className="section-desc">Configure rounds, data split, and optimizer — then start the server-side run.</p>
+          <p className="section-desc">Configure rounds, data split, and a replayable interruption schedule — then start the server-side run.</p>
         </div>
         <div className="grid">
           {[
@@ -1879,6 +1904,21 @@ export default function App() {
               onChange={(e) => setCfg((old) => ({ ...old, transfer_learning: e.target.checked }))}
             />
           </label>
+
+          <label className="schedule-field">
+            <span>Interruption schedule (JSON)</span>
+            <textarea
+              value={scheduleText}
+              disabled={isConfigLocked}
+              spellCheck={false}
+              onChange={(e) => setScheduleText(e.target.value)}
+              placeholder={`[
+  {"client_id": 3, "offline_from": 8, "offline_to": 12},
+  {"client_id": 1, "offline_from": 4, "offline_to": 6},
+  {"client_id": 7, "offline_from": 15, "offline_to": 18}
+]`}
+            />
+          </label>
         </div>
         <div className="buttons">
           <button type="button" className="btn btn-primary" onClick={start} disabled={isConfigLocked}>
@@ -1891,6 +1931,9 @@ export default function App() {
             disabled={!state.running || stopping}
           >
             {stopping ? "Stopping…" : "Stop"}
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={exportExperiment} disabled={starting}>
+            Export JSON
           </button>
         </div>
         {error && <p className="error" role="alert">{error}</p>}
@@ -1931,7 +1974,7 @@ export default function App() {
           <div className="graph-toolbar__title">
             <h2>Global model evolution</h2>
             <p className="section-desc graph-legend-hint">
-              Validation accuracy and loss over rounds (legend). Drag the legend to reposition it.
+              Validation accuracy and loss over rounds, with a participation strip under the round axis. Drag the legend to reposition it.
             </p>
           </div>
           <FigureExportButtons canvasId={evolutionCanvasId} baseName="global-evolution" />
@@ -1963,9 +2006,9 @@ export default function App() {
       <section className="card graph-card">
         <div className="graph-toolbar graph-toolbar--stack">
           <div className="graph-toolbar__title">
-            <h2>Repeated K-fold cross-validation</h2>
+            <h2>Repeated held-out fold evaluation</h2>
             <p className="section-desc graph-legend-hint">
-              Validation accuracy and loss per fold (legend). Drag the legend to reposition it.
+              Frozen global model (no retraining). Validation accuracy and loss per split. Drag the legend to reposition it.
             </p>
           </div>
           <div className="inline-controls">
@@ -2004,7 +2047,7 @@ export default function App() {
             >
               {cvLoading ? "Running…" : "Run validation"}
             </button>
-            <FigureExportButtons canvasId={cvCanvasId} baseName="repeated-kfold" />
+              <FigureExportButtons canvasId={cvCanvasId} baseName="heldout-fold-eval" />
           </div>
         </div>
         {cvData && (
@@ -2027,7 +2070,7 @@ export default function App() {
         )}
         <SeriesLegendBar items={CV_SERIES_LEGEND} />
         <ChartFontToolbar
-          ariaLabel="Figure text size for repeated K-fold cross-validation chart"
+          ariaLabel="Figure text size for held-out fold evaluation chart"
           scale={chartFontScales.cv}
           onChange={(next) => setChartFontScales((prev) => ({ ...prev, cv: clampChartFontScale(next) }))}
         />
@@ -2038,7 +2081,7 @@ export default function App() {
           className="graph-canvas graph-canvas--legend-drag"
           style={{ touchAction: "none" }}
           role="img"
-          aria-label="Repeated K-fold cross-validation chart with validation accuracy and loss. Drag the legend box to move it."
+          aria-label="Held-out fold evaluation chart with validation accuracy and loss. Drag the legend box to move it."
           onPointerDown={onCvLegendPointerDown}
           onPointerMove={onCvLegendPointerMove}
           onPointerUp={onCvLegendPointerUp}
@@ -2051,9 +2094,9 @@ export default function App() {
         <section className="card stats-table-card">
           <div className="graph-toolbar">
             <div className="graph-toolbar__title">
-              <h2>Repeated K-fold statistics</h2>
+              <h2>Held-out fold statistics</h2>
               <p className="section-desc">
-                Held-out fold validation only — the global model is frozen (no retraining).
+                Mean ± std and 95% CI over splits of the frozen global model. Splits are not independent; p-values are omitted.
               </p>
             </div>
             <button
@@ -2087,16 +2130,11 @@ export default function App() {
                     <th scope="col">Metric</th>
                     <th scope="col">Mean ± Std</th>
                     <th scope="col">95% CI</th>
-                    <th scope="col">
-                      <em>p</em>-value
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {cvData.stats_table.map((row) => {
                     const isAcc = String(row.metric).toLowerCase().includes("accuracy");
-                    const pRaw = Number(row.p_value);
-                    const significant = Number.isFinite(pRaw) && pRaw < 0.05;
                     return (
                       <tr key={row.metric}>
                         <td>
@@ -2112,15 +2150,6 @@ export default function App() {
                         </td>
                         <td className="stats-num">{row.mean_std}</td>
                         <td className="stats-num stats-ci">{row.ci_95}</td>
-                        <td>
-                          <span
-                            className={`stats-pvalue ${
-                              significant ? "stats-pvalue--sig" : "stats-pvalue--ns"
-                            }`}
-                          >
-                            {row.p_value_display ?? String(row.p_value)}
-                          </span>
-                        </td>
                       </tr>
                     );
                   })}
@@ -2134,8 +2163,16 @@ export default function App() {
       <section className="card graph-card graph-card--confusion">
         <div className="graph-toolbar">
           <div className="graph-toolbar__title">
-            <h2>Mean confusion matrix</h2>
+            <h2>{cmNormalized ? "Row-normalized confusion matrix" : "Mean confusion matrix"}</h2>
           </div>
+          <label className="field-checkbox">
+            <span>Row-normalize</span>
+            <input
+              type="checkbox"
+              checked={cmNormalized}
+              onChange={(e) => setCmNormalized(e.target.checked)}
+            />
+          </label>
           <FigureExportButtons canvasId={cmCanvasId} baseName="mean-confusion-matrix" />
         </div>
         <ChartFontToolbar
@@ -2154,6 +2191,30 @@ export default function App() {
             style={{ width: `${cmDim.w}px`, height: `${cmDim.h}px`, maxWidth: "none" }}
           />
         </div>
+        {cvData?.per_class_metrics?.length > 0 && (
+          <div className="stats-table-wrap">
+            <table className="stats-table">
+              <thead>
+                <tr>
+                  <th scope="col">Class</th>
+                  <th scope="col">Precision</th>
+                  <th scope="col">Recall</th>
+                  <th scope="col">F1</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cvData.per_class_metrics.map((row) => (
+                  <tr key={row.class_id}>
+                    <td>{row.class_name}</td>
+                    <td className="stats-num">{Number(row.precision).toFixed(3)}</td>
+                    <td className="stats-num">{Number(row.recall).toFixed(3)}</td>
+                    <td className="stats-num">{Number(row.f1).toFixed(3)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className="card clients-section">

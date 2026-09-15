@@ -1,0 +1,2232 @@
+{
+  "name": "control",
+  "distribution": "noniid",
+  "seed": 7,
+  "wall_clock_s": 1342.3071004159992,
+  "peak_rss_mb": 8408.15625,
+  "device": "mps",
+  "export": {
+    "seed": 7,
+    "config": {
+      "num_clients": 10,
+      "rounds": 20,
+      "local_epochs": 3,
+      "samples_per_client": 1000,
+      "batch_size": 64,
+      "lr": 0.01,
+      "seed": 7,
+      "dataset_name": "cifar10",
+      "data_distribution": "noniid",
+      "model_name": "mobilenet_v3_small",
+      "transfer_learning": true,
+      "interruption_schedule": [],
+      "submission_window_s": 0.0
+    },
+    "data_distribution": "noniid",
+    "dataset_name": "cifar10",
+    "model_name": "mobilenet_v3_small",
+    "interruption_schedule": [],
+    "event_history": [],
+    "round_history": [
+      {
+        "round": 1,
+        "val_acc": 0.445,
+        "val_loss": 1.8309573787053426,
+        "accuracy": 0.445,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 2,
+        "val_acc": 0.553,
+        "val_loss": 1.4737010749181112,
+        "accuracy": 0.553,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 3,
+        "val_acc": 0.629,
+        "val_loss": 1.2246903727849325,
+        "accuracy": 0.629,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 4,
+        "val_acc": 0.679,
+        "val_loss": 1.0365679670969645,
+        "accuracy": 0.679,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 5,
+        "val_acc": 0.6936666666666667,
+        "val_loss": 0.9812341664632162,
+        "accuracy": 0.6936666666666667,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 6,
+        "val_acc": 0.602,
+        "val_loss": 1.1375204610824585,
+        "accuracy": 0.602,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 7,
+        "val_acc": 0.716,
+        "val_loss": 0.8495815691947937,
+        "accuracy": 0.716,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 8,
+        "val_acc": 0.629,
+        "val_loss": 1.083112783432007,
+        "accuracy": 0.629,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 9,
+        "val_acc": 0.7133333333333334,
+        "val_loss": 0.8753953011830647,
+        "accuracy": 0.7133333333333334,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 10,
+        "val_acc": 0.7296666666666667,
+        "val_loss": 0.7997009236017864,
+        "accuracy": 0.7296666666666667,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 11,
+        "val_acc": 0.749,
+        "val_loss": 0.7454266416231791,
+        "accuracy": 0.749,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 12,
+        "val_acc": 0.7076666666666667,
+        "val_loss": 0.8595223546028137,
+        "accuracy": 0.7076666666666667,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 13,
+        "val_acc": 0.6873333333333334,
+        "val_loss": 0.8950990848541259,
+        "accuracy": 0.6873333333333334,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 14,
+        "val_acc": 0.6986666666666667,
+        "val_loss": 0.893324104309082,
+        "accuracy": 0.6986666666666667,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 15,
+        "val_acc": 0.6743333333333333,
+        "val_loss": 0.9294403422673543,
+        "accuracy": 0.6743333333333333,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 16,
+        "val_acc": 0.752,
+        "val_loss": 0.7364271291097005,
+        "accuracy": 0.752,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 17,
+        "val_acc": 0.5106666666666667,
+        "val_loss": 1.3645301548639934,
+        "accuracy": 0.5106666666666667,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 18,
+        "val_acc": 0.6756666666666666,
+        "val_loss": 0.9937565488815308,
+        "accuracy": 0.6756666666666666,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 19,
+        "val_acc": 0.7323333333333333,
+        "val_loss": 0.7399366451899211,
+        "accuracy": 0.7323333333333333,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      },
+      {
+        "round": 20,
+        "val_acc": 0.7443333333333333,
+        "val_loss": 0.7679056383768718,
+        "accuracy": 0.7443333333333333,
+        "active_clients": 10,
+        "global_updated": true,
+        "client_submission": [
+          {
+            "client_id": 0,
+            "connected": true
+          },
+          {
+            "client_id": 1,
+            "connected": true
+          },
+          {
+            "client_id": 2,
+            "connected": true
+          },
+          {
+            "client_id": 3,
+            "connected": true
+          },
+          {
+            "client_id": 4,
+            "connected": true
+          },
+          {
+            "client_id": 5,
+            "connected": true
+          },
+          {
+            "client_id": 6,
+            "connected": true
+          },
+          {
+            "client_id": 7,
+            "connected": true
+          },
+          {
+            "client_id": 8,
+            "connected": true
+          },
+          {
+            "client_id": 9,
+            "connected": true
+          }
+        ]
+      }
+    ],
+    "clients": [
+      {
+        "client_id": 0,
+        "samples": 558,
+        "class_distribution": [
+          {
+            "class_id": 0,
+            "class_name": "airplane",
+            "count": 558
+          }
+        ],
+        "rounds_participated": 20,
+        "rounds_missed": 0,
+        "interruption_events": 0,
+        "reconnect_events": 0
+      },
+      {
+        "client_id": 1,
+        "samples": 1686,
+        "class_distribution": [
+          {
+            "class_id": 1,
+            "class_name": "automobile",
+            "count": 974
+          },
+          {
+            "class_id": 0,
+            "class_name": "airplane",
+            "count": 438
+          },
+          {
+            "class_id": 2,
+            "class_name": "bird",
+            "count": 274
+          }
+        ],
+        "rounds_participated": 20,
+        "rounds_missed": 0,
+        "interruption_events": 0,
+        "reconnect_events": 0
+      },
+      {
+        "client_id": 2,
+        "samples": 490,
+        "class_distribution": [
+          {
+            "class_id": 2,
+            "class_name": "bird",
+            "count": 490
+          }
+        ],
+        "rounds_participated": 20,
+        "rounds_missed": 0,
+        "interruption_events": 0,
+        "reconnect_events": 0
+      },
+      {
+        "client_id": 3,
+        "samples": 820,
+        "class_distribution": [
+          {
+            "class_id": 3,
+            "class_name": "cat",
+            "count": 554
+          },
+          {
+            "class_id": 2,
+            "class_name": "bird",
+            "count": 266
+          }
+        ],
+        "rounds_participated": 20,
+        "rounds_missed": 0,
+        "interruption_events": 0,
+        "reconnect_events": 0
+      },
+      {
+        "client_id": 4,
+        "samples": 796,
+        "class_distribution": [
+          {
+            "class_id": 3,
+            "class_name": "cat",
+            "count": 437
+          },
+          {
+            "class_id": 4,
+            "class_name": "deer",
+            "count": 359
+          }
+        ],
+        "rounds_participated": 20,
+        "rounds_missed": 0,
+        "interruption_events": 0,
+        "reconnect_events": 0
+      },
+      {
+        "client_id": 5,
+        "samples": 404,
+        "class_distribution": [
+          {
+            "class_id": 4,
+            "class_name": "deer",
+            "count": 404
+          }
+        ],
+        "rounds_participated": 20,
+        "rounds_missed": 0,
+        "interruption_events": 0,
+        "reconnect_events": 0
+      },
+      {
+        "client_id": 6,
+        "samples": 1474,
+        "class_distribution": [
+          {
+            "class_id": 5,
+            "class_name": "dog",
+            "count": 981
+          },
+          {
+            "class_id": 6,
+            "class_name": "frog",
+            "count": 288
+          },
+          {
+            "class_id": 4,
+            "class_name": "deer",
+            "count": 205
+          }
+        ],
+        "rounds_participated": 20,
+        "rounds_missed": 0,
+        "interruption_events": 0,
+        "reconnect_events": 0
+      },
+      {
+        "client_id": 7,
+        "samples": 1148,
+        "class_distribution": [
+          {
+            "class_id": 6,
+            "class_name": "frog",
+            "count": 746
+          },
+          {
+            "class_id": 7,
+            "class_name": "horse",
+            "count": 402
+          }
+        ],
+        "rounds_participated": 20,
+        "rounds_missed": 0,
+        "interruption_events": 0,
+        "reconnect_events": 0
+      },
+      {
+        "client_id": 8,
+        "samples": 1470,
+        "class_distribution": [
+          {
+            "class_id": 8,
+            "class_name": "ship",
+            "count": 851
+          },
+          {
+            "class_id": 7,
+            "class_name": "horse",
+            "count": 619
+          }
+        ],
+        "rounds_participated": 20,
+        "rounds_missed": 0,
+        "interruption_events": 0,
+        "reconnect_events": 0
+      },
+      {
+        "client_id": 9,
+        "samples": 1154,
+        "class_distribution": [
+          {
+            "class_id": 9,
+            "class_name": "truck",
+            "count": 987
+          },
+          {
+            "class_id": 8,
+            "class_name": "ship",
+            "count": 167
+          }
+        ],
+        "rounds_participated": 20,
+        "rounds_missed": 0,
+        "interruption_events": 0,
+        "reconnect_events": 0
+      }
+    ]
+  },
+  "history": [
+    {
+      "round": 1,
+      "val_acc": 0.445,
+      "val_loss": 1.8309573787053426,
+      "accuracy": 0.445,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "val_acc": 0.553,
+      "val_loss": 1.4737010749181112,
+      "accuracy": 0.553,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "val_acc": 0.629,
+      "val_loss": 1.2246903727849325,
+      "accuracy": 0.629,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "val_acc": 0.679,
+      "val_loss": 1.0365679670969645,
+      "accuracy": 0.679,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "val_acc": 0.6936666666666667,
+      "val_loss": 0.9812341664632162,
+      "accuracy": 0.6936666666666667,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 6,
+      "val_acc": 0.602,
+      "val_loss": 1.1375204610824585,
+      "accuracy": 0.602,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 7,
+      "val_acc": 0.716,
+      "val_loss": 0.8495815691947937,
+      "accuracy": 0.716,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 8,
+      "val_acc": 0.629,
+      "val_loss": 1.083112783432007,
+      "accuracy": 0.629,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 9,
+      "val_acc": 0.7133333333333334,
+      "val_loss": 0.8753953011830647,
+      "accuracy": 0.7133333333333334,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 10,
+      "val_acc": 0.7296666666666667,
+      "val_loss": 0.7997009236017864,
+      "accuracy": 0.7296666666666667,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 11,
+      "val_acc": 0.749,
+      "val_loss": 0.7454266416231791,
+      "accuracy": 0.749,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 12,
+      "val_acc": 0.7076666666666667,
+      "val_loss": 0.8595223546028137,
+      "accuracy": 0.7076666666666667,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 13,
+      "val_acc": 0.6873333333333334,
+      "val_loss": 0.8950990848541259,
+      "accuracy": 0.6873333333333334,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 14,
+      "val_acc": 0.6986666666666667,
+      "val_loss": 0.893324104309082,
+      "accuracy": 0.6986666666666667,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 15,
+      "val_acc": 0.6743333333333333,
+      "val_loss": 0.9294403422673543,
+      "accuracy": 0.6743333333333333,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 16,
+      "val_acc": 0.752,
+      "val_loss": 0.7364271291097005,
+      "accuracy": 0.752,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 17,
+      "val_acc": 0.5106666666666667,
+      "val_loss": 1.3645301548639934,
+      "accuracy": 0.5106666666666667,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 18,
+      "val_acc": 0.6756666666666666,
+      "val_loss": 0.9937565488815308,
+      "accuracy": 0.6756666666666666,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 19,
+      "val_acc": 0.7323333333333333,
+      "val_loss": 0.7399366451899211,
+      "accuracy": 0.7323333333333333,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    },
+    {
+      "round": 20,
+      "val_acc": 0.7443333333333333,
+      "val_loss": 0.7679056383768718,
+      "accuracy": 0.7443333333333333,
+      "active_clients": 10,
+      "global_updated": true,
+      "client_submission": [
+        {
+          "client_id": 0,
+          "connected": true
+        },
+        {
+          "client_id": 1,
+          "connected": true
+        },
+        {
+          "client_id": 2,
+          "connected": true
+        },
+        {
+          "client_id": 3,
+          "connected": true
+        },
+        {
+          "client_id": 4,
+          "connected": true
+        },
+        {
+          "client_id": 5,
+          "connected": true
+        },
+        {
+          "client_id": 6,
+          "connected": true
+        },
+        {
+          "client_id": 7,
+          "connected": true
+        },
+        {
+          "client_id": 8,
+          "connected": true
+        },
+        {
+          "client_id": 9,
+          "connected": true
+        }
+      ]
+    }
+  ]
+}

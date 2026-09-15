@@ -1,0 +1,35 @@
+[
+  {
+    "num_clients": 10,
+    "model_name": "mobilenet_v3_small",
+    "dataset_name": "cifar10",
+    "samples_per_client_requested": 1000,
+    "mean_client_samples": 1000.0,
+    "wall_clock_s": 154.24,
+    "peak_rss_mb": 3806.6,
+    "device": "mps",
+    "final_val_acc": 0.8473333333333334
+  },
+  {
+    "num_clients": 50,
+    "model_name": "mobilenet_v3_small",
+    "dataset_name": "cifar10",
+    "samples_per_client_requested": 1000,
+    "mean_client_samples": 1000.0,
+    "wall_clock_s": 672.38,
+    "peak_rss_mb": 11305.8,
+    "device": "mps",
+    "final_val_acc": 0.87
+  },
+  {
+    "num_clients": 100,
+    "model_name": "mobilenet_v3_small",
+    "dataset_name": "cifar10",
+    "samples_per_client_requested": 1000,
+    "mean_client_samples": 500.0,
+    "wall_clock_s": 825.85,
+    "peak_rss_mb": 15342.5,
+    "device": "mps",
+    "final_val_acc": 0.7953333333333333
+  }
+]

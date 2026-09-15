@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from .federated import FederatedSimulation
 
@@ -20,6 +20,8 @@ class SimulationConfig(BaseModel):
     data_distribution: str = Field("iid")
     model_name: str = Field("mobilenet_v3_small")
     transfer_learning: bool = True
+    interruption_schedule: Optional[List[Dict[str, Any]]] = None
+    submission_window_s: float = Field(1.0, ge=0.0, le=30.0)
 
 
 class InterruptRequest(BaseModel):
@@ -64,10 +66,18 @@ def state() -> dict:
     return sim.get_state()
 
 
+@app.get("/api/export-config")
+def export_config() -> dict:
+    return sim.export_experiment()
+
+
 @app.post("/api/start")
 def start(config: SimulationConfig) -> dict[str, str]:
+    payload = config.model_dump()
+    if payload.get("interruption_schedule") is None:
+        payload["interruption_schedule"] = []
     try:
-        sim.start(config.model_dump())
+        sim.start(payload)
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
@@ -99,7 +109,7 @@ def reconnect(req: ReconnectRequest) -> dict:
 @app.post("/api/cross-validate")
 def cross_validate(req: CrossValidationRequest) -> dict:
     if sim.get_state().get("running"):
-        raise HTTPException(status_code=409, detail="Stop simulation before cross-validation")
+        raise HTTPException(status_code=409, detail="Stop simulation before evaluation")
 
     try:
         sim.validate_cv_matches_training_config(

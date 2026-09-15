@@ -16,6 +16,12 @@ from torch.optim import SGD
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 
+from .availability import (
+    class_metrics_from_confusion,
+    parse_interruption_schedule,
+    row_normalize_confusion,
+    scheduled_offline,
+)
 from .model import create_model, get_supported_models
 
 
@@ -198,8 +204,6 @@ def _compute_metric_row(
         "ci_high": ci_high,
         "mean_std": mean_std,
         "ci_95": ci,
-        "p_value": p_raw,
-        "p_value_display": _format_pvalue(p_raw),
         "t_statistic": float(t_stat),
         "null_mean": null_mean,
         "n": n,
@@ -210,10 +214,10 @@ def build_repeated_kfold_stats_table(
     fold_results: List[Dict[str, Any]],
     num_classes: int,
 ) -> List[Dict[str, Any]]:
-    """Build Mean ± Std / 95% CI / p-value rows for validation metrics only.
+    """Build Mean ± Std / 95% CI rows for held-out validation of a frozen model.
 
-    Repeated K-fold here evaluates a frozen global model (no retraining), so only
-    held-out fold validation metrics are reported in the summary table.
+    Folds share one frozen global model and overlapping repeats, so they are not
+    independent samples. p-values are not reported.
     """
     chance_acc = 1.0 / float(max(num_classes, 1))
     chance_loss = math.log(float(max(num_classes, 2)))
@@ -241,6 +245,7 @@ class ClientState:
     last_interrupt_round: Optional[int] = None
     last_reconnect_round: Optional[int] = None
     last_downtime_rounds: int = 0
+    manual_hold: bool = False
     metrics_round: Optional[int] = None
     train_acc: Optional[float] = None
     train_loss: Optional[float] = None
@@ -268,11 +273,15 @@ class FederatedSimulation:
             "data_distribution": "iid",
             "model_name": "mobilenet_v3_small",
             "transfer_learning": True,
+            "interruption_schedule": [],
+            "submission_window_s": 1.0,
         }
 
         self.current_round = 0
         self.logs: List[str] = []
         self.history: List[Dict[str, Any]] = []
+        self.event_history: List[Dict[str, Any]] = []
+        self.interruption_schedule: List[Dict[str, int]] = []
         self.clients: List[ClientState] = []
         self.class_labels: List[str] = class_labels_for_dataset("cifar10")
         self.num_classes = 10
@@ -438,6 +447,20 @@ class FederatedSimulation:
                 "current_round": self.current_round,
                 "logs": self.logs[-80:],
                 "history": self.history,
+                "event_history": self.event_history,
+                "interruption_schedule": self.interruption_schedule,
+                "interrupt_semantics": {
+                    "model": "binary_client_availability",
+                    "before_local_training": "no_update",
+                    "during_local_training": "partial_work_discarded",
+                    "after_training_before_aggregation": "update_not_submitted",
+                    "empty_round": "global_weights_unchanged",
+                    "submission_window_s": float(self.config.get("submission_window_s", 1.0)),
+                    "note": (
+                        "FLInterrupt models whether a client participates in a round, "
+                        "not latency, bandwidth, packet loss, or stale updates."
+                    ),
+                },
                 "clients": [
                     {
                         "client_id": c.client_id,
@@ -454,6 +477,7 @@ class FederatedSimulation:
                         "last_interrupt_round": c.last_interrupt_round,
                         "last_reconnect_round": c.last_reconnect_round,
                         "last_downtime_rounds": c.last_downtime_rounds,
+                        "manual_hold": c.manual_hold,
                         "metrics_round": c.metrics_round,
                         "train_acc": c.train_acc,
                         "train_loss": c.train_loss,
@@ -476,6 +500,16 @@ class FederatedSimulation:
             }
             self.config["dataset_name"] = str(self.config.get("dataset_name", "cifar10")).lower()
             self.config["data_distribution"] = str(self.config.get("data_distribution", "iid")).lower()
+            self.interruption_schedule = parse_interruption_schedule(
+                config.get("interruption_schedule", self.config.get("interruption_schedule", []))
+            )
+            self.config["interruption_schedule"] = self.interruption_schedule
+            try:
+                self.config["submission_window_s"] = float(self.config.get("submission_window_s", 1.0))
+            except (TypeError, ValueError) as exc:
+                raise RuntimeError("submission_window_s must be a number") from exc
+            if self.config["submission_window_s"] < 0:
+                raise RuntimeError("submission_window_s must be >= 0")
 
             if self.config["dataset_name"] not in SUPPORTED_DATASETS:
                 raise RuntimeError(f"Unsupported dataset: {self.config['dataset_name']}")
@@ -484,6 +518,7 @@ class FederatedSimulation:
             self.current_round = 0
             self.logs = []
             self.history = []
+            self.event_history = []
             self.stop_requested = False
             self.clients = [
                 ClientState(client_id=i)
@@ -507,6 +542,11 @@ class FederatedSimulation:
         self._log("Simulation worker starting…")
         self.thread = threading.Thread(target=self._run, daemon=True)
         self.thread.start()
+
+    def wait(self, timeout: Optional[float] = None) -> None:
+        t = self.thread
+        if t is not None:
+            t.join(timeout=timeout)
 
     def stop(self) -> None:
         with self.lock:
@@ -535,6 +575,7 @@ class FederatedSimulation:
             interrupted_ids: List[int] = []
             for client in target:
                 client.connected = False
+                client.manual_hold = True
                 # A client interrupted in round r can reconnect from round r+1.
                 client.reconnect_round = self.current_round + 1 if self.current_round > 0 else 1
                 client.interruption_events += 1
@@ -543,7 +584,16 @@ class FederatedSimulation:
 
             if interrupted_ids:
                 self.logs.append(
-                    f"Manual interruption: clients {interrupted_ids} disconnected"
+                    f"Availability interrupt: clients {interrupted_ids} will not submit "
+                    f"(mid-training partial work is discarded; same-round reconnect deferred)"
+                )
+                self.event_history.append(
+                    {
+                        "type": "interrupt",
+                        "source": "manual",
+                        "round": self.current_round,
+                        "client_ids": interrupted_ids,
+                    }
                 )
 
             return interrupted_ids
@@ -583,6 +633,7 @@ class FederatedSimulation:
                     continue
 
                 client.connected = True
+                client.manual_hold = False
                 client.reconnect_round = -1
                 client.reconnect_events += 1
                 client.disconnect_streak = 0
@@ -596,10 +647,105 @@ class FederatedSimulation:
 
             if reconnected_ids:
                 self.logs.append(
-                    f"Manual reconnect: clients {reconnected_ids} connected"
+                    f"Availability reconnect: clients {reconnected_ids} eligible to participate"
+                )
+                self.event_history.append(
+                    {
+                        "type": "reconnect",
+                        "source": "manual",
+                        "round": self.current_round,
+                        "client_ids": reconnected_ids,
+                    }
                 )
 
             return reconnected_ids
+
+    def export_experiment(self) -> Dict[str, Any]:
+        with self.lock:
+            return {
+                "seed": int(self.config.get("seed", 42)),
+                "config": copy.deepcopy(self.config),
+                "data_distribution": self.config.get("data_distribution"),
+                "dataset_name": self.config.get("dataset_name"),
+                "model_name": self.config.get("model_name"),
+                "interruption_schedule": copy.deepcopy(self.interruption_schedule),
+                "event_history": copy.deepcopy(self.event_history),
+                "round_history": copy.deepcopy(self.history),
+                "clients": [
+                    {
+                        "client_id": c.client_id,
+                        "samples": c.samples,
+                        "class_distribution": c.class_distribution or [],
+                        "rounds_participated": c.rounds_participated,
+                        "rounds_missed": c.rounds_missed,
+                        "interruption_events": c.interruption_events,
+                        "reconnect_events": c.reconnect_events,
+                    }
+                    for c in self.clients
+                ],
+            }
+
+    def _sleep_window(self, label: str) -> bool:
+        """Simulated in-process submission/reconnect wait. Returns True if stop requested."""
+        window = float(self.config.get("submission_window_s", 1.0))
+        if window <= 0:
+            return False
+        steps = max(1, int(round(window / 0.1)))
+        self._log(f"{label} ({window:.1f}s in-process wait; not a network deadline)")
+        for _ in range(steps):
+            with self.lock:
+                if self.stop_requested:
+                    self._log("Simulation stop requested")
+                    return True
+            time.sleep(window / steps)
+        return False
+
+    def _apply_schedule(self, round_idx: int) -> None:
+        interrupted_ids: List[int] = []
+        reconnected_ids: List[int] = []
+        with self.lock:
+            for client in self.clients:
+                want_offline = scheduled_offline(
+                    self.interruption_schedule, client.client_id, round_idx
+                )
+                if want_offline:
+                    if client.connected:
+                        client.connected = False
+                        client.reconnect_round = round_idx + 1
+                        client.interruption_events += 1
+                        client.last_interrupt_round = round_idx
+                        interrupted_ids.append(client.client_id)
+                elif not client.manual_hold and not client.connected:
+                    client.connected = True
+                    client.reconnect_round = -1
+                    client.reconnect_events += 1
+                    client.disconnect_streak = 0
+                    client.last_reconnect_round = round_idx
+                    reconnected_ids.append(client.client_id)
+            if interrupted_ids:
+                self.logs.append(
+                    f"Schedule interrupt at round {round_idx}: clients {interrupted_ids}"
+                )
+                self.event_history.append(
+                    {
+                        "type": "interrupt",
+                        "source": "schedule",
+                        "round": round_idx,
+                        "client_ids": interrupted_ids,
+                    }
+                )
+            if reconnected_ids:
+                self.logs.append(
+                    f"Schedule reconnect at round {round_idx}: clients {reconnected_ids}"
+                )
+                self.event_history.append(
+                    {
+                        "type": "reconnect",
+                        "source": "schedule",
+                        "round": round_idx,
+                        "client_ids": reconnected_ids,
+                    }
+                )
 
     def _log(self, message: str) -> None:
         with self.lock:
@@ -677,8 +823,6 @@ class FederatedSimulation:
 
         test_subset = Subset(test_data, list(range(0, min(3000, len(test_data)))))
         test_loader = DataLoader(test_subset, batch_size=128, shuffle=False)
-        train_eval_subset = Subset(train_data, list(range(0, min(3000, len(train_data)))))
-        train_eval_loader = DataLoader(train_eval_subset, batch_size=128, shuffle=False)
 
         self._log(
             f"Simulation started with {num_clients} clients for {round_count} rounds on "
@@ -697,7 +841,8 @@ class FederatedSimulation:
                 self._log("Simulation stop requested")
                 return
 
-            self._log(f"Round {round_idx}: selecting connected clients")
+            self._apply_schedule(round_idx)
+            self._log(f"Round {round_idx}: selecting available clients")
 
             active_models: List[Dict[str, torch.Tensor]] = []
             weights: List[int] = []
@@ -773,15 +918,10 @@ class FederatedSimulation:
                 )
 
             if deferred_clients:
-                self._log(
-                    f"Round {round_idx}: reconnect window open for deferred clients (1s)"
-                )
-                for _ in range(10):
-                    with self.lock:
-                        if self.stop_requested:
-                            self._log("Simulation stop requested")
-                            return
-                    time.sleep(0.1)
+                if self._sleep_window(
+                    f"Round {round_idx}: reconnect window for clients interrupted before local training"
+                ):
+                    return
 
             for client in deferred_clients:
                 with self.lock:
@@ -854,15 +994,10 @@ class FederatedSimulation:
                     f"waiting for submission phase"
                 )
 
-            self._log(
-                f"Round {round_idx}: local training finished. Submission window open (1s)"
-            )
-            for _ in range(10):
-                with self.lock:
-                    if self.stop_requested:
-                        self._log("Simulation stop requested")
-                        return
-                time.sleep(0.1)
+            if self._sleep_window(
+                f"Round {round_idx}: submission window after local training (interrupt here drops the update)"
+            ):
+                return
 
             for update in trained_updates:
                 client = client_by_id[int(update["client_id"])]
@@ -920,20 +1055,16 @@ class FederatedSimulation:
                 self._log(
                     f"Round {round_idx}: no active clients; global model unchanged"
                 )
-                train_acc, train_loss = self._evaluate(self.global_model, train_eval_loader)
                 val_acc, val_loss = self._evaluate(self.global_model, test_loader)
             else:
                 aggregated = self._fedavg(active_models, weights)
                 self.global_model.load_state_dict(aggregated)
-                train_acc, train_loss = self._evaluate(self.global_model, train_eval_loader)
                 val_acc, val_loss = self._evaluate(self.global_model, test_loader)
 
             with self.lock:
                 self.history.append(
                     {
                         "round": round_idx,
-                        "train_acc": train_acc,
-                        "train_loss": train_loss,
                         "val_acc": val_acc,
                         "val_loss": val_loss,
                         "accuracy": val_acc,
@@ -951,7 +1082,6 @@ class FederatedSimulation:
             self._log(
                 f"Round {round_idx} — SERVER AGGREGATE ({agg_note}, "
                 f"n={len(active_models)}): "
-                f"train_acc={train_acc:.4f}, train_loss={train_loss:.4f}, "
                 f"val_acc={val_acc:.4f}, val_loss={val_loss:.4f}"
             )
             time.sleep(0.3)
@@ -1184,6 +1314,12 @@ class FederatedSimulation:
                 confusion_sum += confusion
 
         mean_confusion = (confusion_sum / float(total_folds)).tolist()
+        normalized = row_normalize_confusion(mean_confusion)
+        labels = class_labels_for_dataset(
+            str(self.config.get("dataset_name", "cifar10")),
+            self.num_classes,
+        )
+        per_class = class_metrics_from_confusion(mean_confusion, labels)
         mean_train_acc = sum(float(r["train_accuracy"]) for r in fold_results) / float(total_folds)
         mean_train_loss = sum(float(r["train_loss"]) for r in fold_results) / float(total_folds)
         mean_val_acc = sum(float(r["val_accuracy"]) for r in fold_results) / float(total_folds)
@@ -1204,17 +1340,15 @@ class FederatedSimulation:
             "mean_accuracy": mean_val_acc,
             "mean_loss": mean_val_loss,
             "mean_confusion_matrix": mean_confusion,
-            "labels": class_labels_for_dataset(
-                str(self.config.get("dataset_name", "cifar10")),
-                self.num_classes,
-            ),
+            "normalized_confusion_matrix": normalized,
+            "per_class_metrics": per_class,
+            "labels": labels,
             "dataset_name": str(self.config.get("dataset_name", "cifar10")),
             "stats_table": stats_table,
             "stats_table_note": (
-                f"Repeated K-fold cross-validation statistics "
-                f"({k_folds}-fold × {repeats} repeats, {total_folds} folds). "
-                "The frozen global model is reused (no retraining); metrics are "
-                "held-out fold validation only. One-sample t-test vs chance "
-                "accuracy (1/C) and chance CE loss (ln C)."
+                f"Repeated held-out fold evaluation of the frozen global model "
+                f"({k_folds} folds × {repeats} repeats, {total_folds} splits). "
+                "The model is not retrained. Metrics are mean ± std and 95% CI over splits; "
+                "splits are not independent, so p-values are omitted."
             ),
         }

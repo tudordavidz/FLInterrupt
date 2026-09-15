@@ -240,6 +240,17 @@ h2 {
   letter-spacing: -0.02em;
 }
 
+.schedule-field {
+  grid-column: 1 / -1;
+}
+
+.schedule-field textarea {
+  min-height: 128px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  resize: vertical;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(188px, 1fr));
@@ -260,7 +271,8 @@ label span {
 
 input[type="number"],
 input[type="text"],
-select {
+select,
+textarea {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);

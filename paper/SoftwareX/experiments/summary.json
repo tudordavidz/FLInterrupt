@@ -1,0 +1,182 @@
+[
+  {
+    "name": "control",
+    "distribution": "noniid",
+    "seed": 42,
+    "final_val_acc": 0.674,
+    "final_val_loss": 0.9068566694259643,
+    "wall_clock_s": 1416.320336291,
+    "peak_rss_mb": 3963.890625,
+    "device": "mps"
+  },
+  {
+    "name": "control",
+    "distribution": "iid",
+    "seed": 42,
+    "final_val_acc": 0.9156666666666666,
+    "final_val_loss": 0.3065180768171946,
+    "wall_clock_s": 1328.923862375,
+    "peak_rss_mb": 3936.453125,
+    "device": "mps"
+  },
+  {
+    "name": "moderate",
+    "distribution": "iid",
+    "seed": 42,
+    "final_val_acc": 0.906,
+    "final_val_loss": 0.3382643627325694,
+    "wall_clock_s": 1225.759102959,
+    "peak_rss_mb": 4043.703125,
+    "device": "mps"
+  },
+  {
+    "name": "severe",
+    "distribution": "iid",
+    "seed": 42,
+    "final_val_acc": 0.9106666666666666,
+    "final_val_loss": 0.31385583130518596,
+    "wall_clock_s": 940.6174553340002,
+    "peak_rss_mb": 4113.484375,
+    "device": "mps"
+  },
+  {
+    "name": "control",
+    "distribution": "iid",
+    "seed": 7,
+    "final_val_acc": 0.8903333333333333,
+    "final_val_loss": 0.4074435669581095,
+    "wall_clock_s": 1348.2957887499997,
+    "peak_rss_mb": 5893.09375,
+    "device": "mps"
+  },
+  {
+    "name": "moderate",
+    "distribution": "iid",
+    "seed": 7,
+    "final_val_acc": 0.8333333333333334,
+    "final_val_loss": 0.5964068239529927,
+    "wall_clock_s": 1273.413201542,
+    "peak_rss_mb": 6005.84375,
+    "device": "mps"
+  },
+  {
+    "name": "severe",
+    "distribution": "iid",
+    "seed": 7,
+    "final_val_acc": 0.907,
+    "final_val_loss": 0.3295429852803548,
+    "wall_clock_s": 1005.6085739170003,
+    "peak_rss_mb": 6084.609375,
+    "device": "mps"
+  },
+  {
+    "name": "control",
+    "distribution": "iid",
+    "seed": 123,
+    "final_val_acc": 0.912,
+    "final_val_loss": 0.3230122976303101,
+    "wall_clock_s": 1333.3384526669997,
+    "peak_rss_mb": 7876.40625,
+    "device": "mps"
+  },
+  {
+    "name": "moderate",
+    "distribution": "iid",
+    "seed": 123,
+    "final_val_acc": 0.9126666666666666,
+    "final_val_loss": 0.3079157189528147,
+    "wall_clock_s": 1239.0084385829996,
+    "peak_rss_mb": 7982.78125,
+    "device": "mps"
+  },
+  {
+    "name": "severe",
+    "distribution": "iid",
+    "seed": 123,
+    "final_val_acc": 0.8973333333333333,
+    "final_val_loss": 0.3458313463528951,
+    "wall_clock_s": 996.5435963750006,
+    "peak_rss_mb": 8059.703125,
+    "device": "mps"
+  },
+  {
+    "name": "moderate",
+    "distribution": "noniid",
+    "seed": 42,
+    "final_val_acc": 0.7463333333333333,
+    "final_val_loss": 0.7698667624791463,
+    "wall_clock_s": 1249.028997292,
+    "peak_rss_mb": 8190.375,
+    "device": "mps"
+  },
+  {
+    "name": "severe",
+    "distribution": "noniid",
+    "seed": 42,
+    "final_val_acc": 0.7103333333333334,
+    "final_val_loss": 0.8739692344665527,
+    "wall_clock_s": 924.2635400409999,
+    "peak_rss_mb": 8266.140625,
+    "device": "mps"
+  },
+  {
+    "name": "control",
+    "distribution": "noniid",
+    "seed": 7,
+    "final_val_acc": 0.7443333333333333,
+    "final_val_loss": 0.7679056383768718,
+    "wall_clock_s": 1342.3071004159992,
+    "peak_rss_mb": 8408.15625,
+    "device": "mps"
+  },
+  {
+    "name": "moderate",
+    "distribution": "noniid",
+    "seed": 7,
+    "final_val_acc": 0.5936666666666667,
+    "final_val_loss": 1.1392502892812093,
+    "wall_clock_s": 1257.7402678750004,
+    "peak_rss_mb": 8520.5625,
+    "device": "mps"
+  },
+  {
+    "name": "severe",
+    "distribution": "noniid",
+    "seed": 7,
+    "final_val_acc": 0.7286666666666667,
+    "final_val_loss": 0.7896575299898784,
+    "wall_clock_s": 990.2663530420014,
+    "peak_rss_mb": 8599.3125,
+    "device": "mps"
+  },
+  {
+    "name": "control",
+    "distribution": "noniid",
+    "seed": 123,
+    "final_val_acc": 0.6453333333333333,
+    "final_val_loss": 0.9772159846623739,
+    "wall_clock_s": 1319.577787833001,
+    "peak_rss_mb": 8738.4375,
+    "device": "mps"
+  },
+  {
+    "name": "moderate",
+    "distribution": "noniid",
+    "seed": 123,
+    "final_val_acc": 0.732,
+    "final_val_loss": 0.7914710563023885,
+    "wall_clock_s": 1211.8046360420012,
+    "peak_rss_mb": 8844.84375,
+    "device": "mps"
+  },
+  {
+    "name": "severe",
+    "distribution": "noniid",
+    "seed": 123,
+    "final_val_acc": 0.696,
+    "final_val_loss": 0.9134668375651042,
+    "wall_clock_s": 973.1813997910031,
+    "peak_rss_mb": 8921.90625,
+    "device": "mps"
+  }
+]
